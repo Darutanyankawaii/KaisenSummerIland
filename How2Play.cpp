@@ -1,8 +1,7 @@
-﻿#include "How2Play.hpp"
+#include "How2Play.hpp"
 
 How2Play::How2Play(const InitData& init) : IScene{ init }
 {
-	// 背景の色を設定 | Set background color
 	Scene::SetBackground(ColorF{ 1.0, 1.0, 1.0 });
 }
 
@@ -10,15 +9,15 @@ void How2Play::update()
 {
 	if (back.leftClicked())
 	{
-		//タイトルに遷移
 		changeScene(SceneName::Title);
 	}
 }
 
 void How2Play::draw() const
 {
-	//半透明の円を描く | Draw a semi-trasparent circle
-	Circle{Cursor::Pos(), 40 }.draw(ColorF{ 1.0, 0.0, 0.0, 0.5 });
+#ifdef DEBUGGING
+	Circle{ Cursor::Pos(), 40 }.draw(ColorF{ 1.0, 0.0, 0.0, 0.5 });
+#endif
 
 	back.draw(Palette::White).drawFrame(0, 3, Palette::Black);
 
@@ -31,6 +30,6 @@ void How2Play::draw() const
 
 	if (back.mouseOver())
 	{
-		back.draw(ColorF(139, 0, 0, 0.3));
+		back.draw(ColorF{ 139.0 / 255, 0.0, 0.0, 0.3 });
 	}
 }

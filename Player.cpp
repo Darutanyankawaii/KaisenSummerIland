@@ -1,154 +1,144 @@
-﻿#include "Player.hpp"
+#include "Player.hpp"
 #include "Bullet.hpp"
+#include "Enemy.hpp"
+#include "IWeapon.hpp"
+#include "WeaponFactory.hpp"
+#include "AssetIDs.hpp"
 
-Player::Player()
-	: isGround_(false), speed_{ SET_SPPED }, accel_{ SET_ACCEL }
-{
-	initAnimations();
-	attackDir_ = (Cursor::Pos() - pos_).normalized();
+namespace {
+	constexpr Vec2 kBulletOffset{ 32, 32 };
 }
 
-Player::Player(const Vec2 pos)
-	: isGround_(false), speed_{ SET_SPPED }, accel_{ SET_ACCEL }
+Player::Player()
 {
-	setPos(pos);
+	weapon_ = WeaponFactory::create(WeaponName::Water_Gun);
 	initAnimations();
 	attackDir_ = (Cursor::Pos() - pos_).normalized();
 }
 
 Player::~Player()
 {
-	AudioAsset(U"walk").stop();
+	AudioAsset(GameAssets::Audio::Walk).stop();
 }
 
-void Player::updateX() {
+void Player::setWeapon(int weaponId)
+{
+	weapon_ = WeaponFactory::create(weaponId);
+}
 
-	if (shotNow)
+int Player::weaponId() const
+{
+	return weapon_ ? weapon_->weaponId() : 0;
+}
+
+void Player::updateX()
+{
+	if (shotNow_)
 	{
-		shotTime += Scene::DeltaTime();
-		if (shotTime > 0.5)
+		shotTime_ += Scene::DeltaTime();
+		if (shotTime_ > kShotPostDuration)
 		{
-			shotTime = 0;
-			shotNow = false;
-			state = State::stand;
+			shotTime_ = 0;
+			shotNow_ = false;
+			state_ = State::Stand;
 		}
 		else
 		{
-			state = State::aiming;
+			state_ = State::Aiming;
 		}
 	}
 
-	if (state == State::aiming) {
+	if (state_ == State::Aiming)
+	{
 		if ((KeyD | KeyRight | KeyA | KeyLeft).down())
-			state = State::walk;
+			state_ = State::Walk;
 	}
-	else {
+	else
+	{
 		if (isGround_)
-			state = State::stand;
+			state_ = State::Stand;
 
-		//Dか＞ボタンで右に移動
-		if ((KeyD | KeyRight).pressed() && !aimFlag) {
+		if ((KeyD | KeyRight).pressed() && !aimFlag_)
+		{
 			playerDir_ = 1;
-			speed_.x = playerDir_ * WALK_SPEED;
-			state = State::walk;
+			speed_.x = playerDir_ * walkSpeed_;
+			state_ = State::Walk;
 		}
-		//Aか＜ボタンで右に移動
-		else if ((KeyA | KeyLeft).pressed() && !aimFlag) {
+		else if ((KeyA | KeyLeft).pressed() && !aimFlag_)
+		{
 			playerDir_ = -1;
-			speed_.x = playerDir_ * WALK_SPEED;
-			state = State::walk;
+			speed_.x = playerDir_ * walkSpeed_;
+			state_ = State::Walk;
 		}
-		else {
-			speed_.x = 0.0f;
+		else
+		{
+			speed_.x = 0.0;
 		}
 	}
 
-	//ノックバック処理
-	//isKnockbackがfalseなら通常のキー移動の移動が発生
-	//isKnockbackがtrueならノックバックが発生　＆　通常のキー移動が不可能に
-	if (isKnockback == true) {
-		//敵にぶつかった際、プレイヤーの移動ができなくなり、ノックバックする
-		pos_.x += knockBackDir * 5;
-		if (collisionalTimer.reachedZero() == true) {
-			isKnockback = false;
+	if (isKnockback_)
+	{
+		pos_.x += knockBackDir_ * kKnockBackSpeed;
+		if (collisionalTimer_.reachedZero())
+		{
+			isKnockback_ = false;
 		}
 	}
-	else {
-		// x方向の移動
+	else
+	{
 		pos_.x += speed_.x;
 	}
 
-	//無敵時間が切れた時、無敵のフラグを下げる。
-	if (invincibleTimer.reachedZero() == true) {
-		isInvincible = false;
+	if (invincibleTimer_.reachedZero())
+	{
+		isInvincible_ = false;
 	}
 }
 
-void Player::updateY() {
-	accel_.y = gravity;		//落下スピードの初期化（これによって重力が加算される）
+void Player::updateY()
+{
+	accel_.y = gravity_;
 
-	// ジャンプ処理
-	if (KeySpace.down() && isGround_) {
-		accel_.y -= 18.0f;
-		state = State::jump;
+	if (KeySpace.down() && isGround_)
+	{
+		accel_.y -= kJumpImpulse;
+		state_ = State::Jump;
 	}
 
-	// y方向の移動
 	speed_.y += accel_.y;
 	pos_.y += speed_.y;
 
-	// 地面にいないとき
-	if (!isGround_ && state != State::aiming) {
-		state = State::fall;
+	if (!isGround_ && state_ != State::Aiming)
+	{
+		state_ = State::Fall;
 	}
 }
 
-void Player::lastUpdate(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>& playerBullets_) {
-	// 攻撃処理
+void Player::lastUpdate(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>& playerBullets_)
+{
 	attack(camera, playerBullets_);
 
-	//if (MouseR.up()) {
-	//	state = State::stand;
-	//}
+	// Animation 更新
+	animations_.tick(state_, weaponId(), attackDir_);
 
-	// アニメーションの更新
-	if (prevState != state) {
-		animation = animations.at(state);
-		animation->start();
-	}
-	animation->update();
-
-	// サウンド処理
 	playSound();
-
-	// 状態の更新
-	prevState = state;
+	prevState_ = state_;
 }
 
-void Player::draw() const {
+void Player::draw() const
+{
+	const Texture tex = animations_.currentTexture();
+	if (!tex) return;
 
-	if (state == State::aiming) {
-		animation->getTexture().draw(pos_);
+	if (state_ == State::Aiming)
+	{
+		tex.draw(pos_);
 	}
-	else {
-		if (playerDir_ == 1)
-			animation->getTexture().draw(pos_);
-		else if (playerDir_ == -1)
-			animation->getTexture().mirrored().draw(pos_);
+	else
+	{
+		if (playerDir_ == 1) tex.draw(pos_);
+		else if (playerDir_ == -1) tex.mirrored().draw(pos_);
 	}
-#ifdef DEBUGGING
-	if (state == State::aiming) {
-		animation->getTexture().draw(pos).drawFrame(1.0, Palette::Green);
-	}
-	else {
-		if (direction == 1)
-			animation->getTexture().draw(pos).drawFrame(1.0, Palette::Green);
-		else if (direction == -1)
-			animation->getTexture().mirrored().draw(pos).drawFrame(1.0, Palette::Green);
-	}
-	Print << U"state: {}"_fmt(stateToString(state));
-	Print << U"anim index: {}"_fmt(animation->getIndex());
-#endif
 }
 
 void Player::receiveDamage(int damage)
@@ -156,28 +146,18 @@ void Player::receiveDamage(int damage)
 	hp_ -= damage;
 }
 
-void Player::knockBackToEnemy(Array<std::unique_ptr<Enemy>>& enemies)
+void Player::knockBackToEnemy(const Array<std::unique_ptr<Enemy>>& enemies)
 {
-	for (auto& enemy : enemies)
+	for (const auto& enemy : enemies)
 	{
-		if (!isInvincible && this->getRectF().intersects(enemy->getRectF()))
+		if (!isInvincible_ && this->getRectF().intersects(enemy->getRectF()))
 		{
-			collisionalTimer.restart();
-			invincibleTimer.restart();
+			collisionalTimer_.restart();
+			invincibleTimer_.restart();
 			receiveDamage(1);
-			// ノックバックと無敵時間のフラグを立てる
-			isKnockback = true;
-			isInvincible = true;
-			if (pos_.x < enemy->pos_.x)
-			{
-				// 左に移動
-				knockBackDir = -1;
-			}
-			else
-			{
-				// 右に移動
-				knockBackDir = 1;
-			}
+			isKnockback_ = true;
+			isInvincible_ = true;
+			knockBackDir_ = (pos_.x < enemy->getPosX()) ? -1 : 1;
 		}
 	}
 }
@@ -187,160 +167,70 @@ void Player::recoverDamage(int damage)
 	hp_ += damage;
 }
 
-void Player::initAnimations() {
-	animations[State::stand] = loadAnimation(State::stand, true);
-	animations[State::walk] = loadAnimation(State::walk, true);
-
-	// Todo: 素材が完成したら正しいものを読み込む
-	animations[State::jump] = loadAnimation(State::stand, true);
-	animations[State::fall] = loadAnimation(State::stand, true);
-	animations[State::aiming] = loadAnimation(State::aiming, true);
-
-	// 最初のアニメーションを設定
-	animation = animations[state];
-	animation->start();
+void Player::initAnimations()
+{
+	animations_.load();
 }
 
-IAnimation* Player::loadAnimation(State state, bool isLoop) {
-	String stateName = stateToString(state);
-	String dirPath = U"image/player/{}"_fmt(stateName);
+void Player::playSound()
+{
+	if (prevState_ == state_) return;
 
-	if (state == State::aiming)
-		return (IAnimation*)(new AimingAnimation(attackDir_, weapon_, dirPath, isLoop));
-	else if (state == State::stand)
-		return (IAnimation*)(new StandAnimation(weapon_, dirPath, isLoop));
-
-	return (IAnimation*)(new Animation(dirPath, isLoop));
-}
-
-String Player::stateToString(State state) const {
-	switch (state) {
-	case State::stand:
-		return U"stand";
-	case State::walk:
-		return U"walk";
-	case State::jump:
-		return U"jump";
-	case State::fall:
-		return U"fall";
-	case State::aiming:
-		return U"aiming";
+	if (prevState_ == State::Walk)
+	{
+		AudioAsset(GameAssets::Audio::Walk).stop();
 	}
-	// 通常時
-	return U"stand";
-}
 
-void Player::playSound() {
-	// State遷移があったとき
-	if (prevState != state) {
-		// 前の状態
-		switch (prevState) {
-		case State::walk:
-			AudioAsset(U"walk").stop();
-		}
-		// 新しい状態
-		switch (state) {
-		case State::walk:
-			if (isGround_) {
-				AudioAsset(U"walk").setLoop(true);
-				AudioAsset(U"walk").play();
-			}
-			break;
-		}
+	if (state_ == State::Walk && isGround_)
+	{
+		AudioAsset(GameAssets::Audio::Walk).setLoop(true);
+		AudioAsset(GameAssets::Audio::Walk).play();
 	}
 }
 
-void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>& playerBullets_) {
+void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>& playerBullets_)
+{
+	if (!weapon_) return;
+
+	// クールタイムは常に進行
+	weapon_->tick(Scene::DeltaTime());
+
+	aimFlag_ = false;
+
+	const bool isFirstClick = MouseL.down();
+	const bool isHolding = MouseL.pressed();
+	const bool inAimingState = (state_ == State::Aiming);
+
 	const auto t = camera.createTransformer();
-	Vec2 startPos = pos_ + Vec2{ 32, 32 };
-	Vec2 dir = Cursor::Pos();
-	aimFlag = false;
+	const Vec2 startPos = pos_ + kBulletOffset;
+	const Vec2 cursorWorld = Cursor::Pos();
 
-	//攻撃
-	if (cooltime <= 0.0 && MouseL.down()) {
-		//エイムしながらだと打ちにくいので一度停止
-		//if (state == State::aiming && cooltime <= 0.0 && MouseL.down())
+	bool fired = false;
+
+	if (isFirstClick)
+	{
+		// 任意の武器: クリックの瞬間に aiming へ
 		speed_.x = 0;
-		aimFlag = true;
-		//ロック機能復活した場合削除
+		aimFlag_ = true;
 		attackDir_ = (Cursor::Pos() - getCenter()).normalize();
-		state = State::aiming;
+		state_ = State::Aiming;
+		shotNow_ = true;
 
-		shotNow = true;
-
-		//単発攻撃
-		switch (weapon_)
+		// 単発武器のみ: 同フレームで発射
+		if (!weapon_->isContinuous())
 		{
-		case static_cast<int>(WeaponName::Water_Gun):
-			playerBullets_.push_back(std::make_unique<BWater_Gun>(startPos, dir));
-			cooltime += 0.5;
-			goto default_case;
-		case static_cast<int>(WeaponName::Starfish):
-			playerBullets_.push_back(std::make_unique<BStarfish_Gun>(startPos, dir));
-			cooltime += 1.0;
-			goto default_case;
-		case static_cast<int>(WeaponName::Shotgun):
-		{
-			Vec2 target = dir - startPos;
-			//角度の散らばり
-			constexpr double spread_theta = 10 * Math::Pi / 180;
-			//速度の散らばり
-			constexpr double spread_speed = 0.1;
-			auto f = [&](Vec2 v)
-				{
-					double theta = Random(-spread_theta, spread_theta);
-					double speed_ = Random(1 - spread_speed, 1 + spread_speed);
-					return Vec2(v.x * Cos(theta) - v.y * Sin(theta), v.x * Sin(theta) + v.y * Cos(theta)) * speed_;
-				};
-			for (size_t i = 0; i < 3; ++i)
-			{
-				playerBullets_.push_back(std::make_unique<BShot_Gun>(startPos, f(target) + startPos));
-			}
-			cooltime += 0.75;
-			goto default_case;
-		}
-		case static_cast<int>(WeaponName::Bucket):
-		{
-			Vec2 target = dir - startPos;
-			//角度の散らばり
-			constexpr double spread_theta = 50 * Math::Pi / 180;
-			//速度の散らばり
-			constexpr double spread_speed = 0.1;
-			auto f = [&](Vec2 v)
-				{
-					double theta = Random(-spread_theta, spread_theta);
-					double speed_ = Random(1 - spread_speed, 1 + spread_speed);
-					return Vec2(v.x * Cos(theta) - v.y * Sin(theta), v.x * Sin(theta) + v.y * Cos(theta)) * speed_;
-				};
-			for (size_t i = 0; i < 5; ++i)
-			{
-				playerBullets_.push_back(std::make_unique<BBucket_Gun>(startPos, f(target) + startPos));
-			}
-			cooltime += 1.0;
-			goto default_case;
-		}
-	default_case:
-		AudioAsset(U"shot").playOneShot();
+			fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
 		}
 	}
-	else if (state == State::aiming && cooltime <= 0 && MouseL.pressed())
+	else if (isHolding && inAimingState && weapon_->isContinuous())
 	{
-		shotNow = true;
-		//連射攻撃
-		switch (weapon_)
-		{
-		case static_cast<int>(WeaponName::Machine_Gun):
-			playerBullets_.push_back(std::make_unique<BMachine_Gun>(startPos, dir));
-			cooltime += 0.2;
-			goto default_case2;
-		default_case2:
-			AudioAsset(U"shot").playOneShot();
-		}
+		// 連射武器: aiming 中の継続クリック
+		shotNow_ = true;
+		fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
 	}
-	else
+
+	if (fired)
 	{
-		//クールタイム減少
-		cooltime -= Scene::DeltaTime();
-		if (cooltime < 0.0) cooltime = 0.0;
+		AudioAsset(GameAssets::Audio::Shot).playOneShot();
 	}
 }

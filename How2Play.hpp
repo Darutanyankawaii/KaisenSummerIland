@@ -1,5 +1,5 @@
-﻿# pragma once
-# include "Basic.hpp"
+#pragma once
+#include "Basic.hpp"
 
 class How2Play : public App::Scene
 {
@@ -7,6 +7,7 @@ public:
 	How2Play(const InitData& init);
 	void update() override;
 	void draw() const override;
+
 private:
 	Font font{ FontMethod::MSDF, 48 };
 

@@ -899,8 +899,5 @@
     <ClInclude Include="GameOver.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Object.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

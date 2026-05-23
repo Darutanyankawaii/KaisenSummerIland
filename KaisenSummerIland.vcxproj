@@ -16,18 +16,19 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>KaisenSummerIland</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>da</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -71,7 +72,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>26451;26812;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ForcedIncludeFiles>stdafx.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <BuildStlModules>false</BuildStlModules>
@@ -98,7 +99,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>26451;26812;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ForcedIncludeFiles>stdafx.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <BuildStlModules>false</BuildStlModules>
@@ -116,6 +117,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Animation.cpp" />
+    <ClCompile Include="AssetRegistry.cpp" />
+    <ClCompile Include="BucketWeapon.cpp" />
     <ClCompile Include="Bullet.cpp" />
     <ClCompile Include="Collision.cpp" />
     <ClCompile Include="Enemy.cpp" />
@@ -124,14 +127,24 @@
     <ClCompile Include="GameOver.cpp" />
     <ClCompile Include="How2Play.cpp" />
     <ClCompile Include="Item.cpp" />
+    <ClCompile Include="MachineGunWeapon.cpp" />
+    <ClCompile Include="MaguroAI.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MapParser.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="PlayerAnimationSet.cpp" />
+    <ClCompile Include="ShotgunWeapon.cpp" />
+    <ClCompile Include="StageRepository.cpp" />
     <ClCompile Include="StageSelect.cpp" />
+    <ClCompile Include="StarfishWeapon.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="TakoAI.cpp" />
     <ClCompile Include="Title.cpp" />
+    <ClCompile Include="WaterGunWeapon.cpp" />
+    <ClCompile Include="WeaponFactory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="App\engine\texture\box-shadow\128.png" />
@@ -338,7 +351,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Animation.hpp" />
+    <ClInclude Include="AssetIDs.hpp" />
+    <ClInclude Include="AssetRegistry.hpp" />
     <ClInclude Include="Basic.hpp" />
+    <ClInclude Include="BucketWeapon.hpp" />
     <ClInclude Include="Bullet.hpp" />
     <ClInclude Include="Block.hpp" />
     <ClInclude Include="Camera.hpp" />
@@ -349,12 +365,23 @@
     <ClInclude Include="GameOver.hpp" />
     <ClInclude Include="How2Play.hpp" />
     <ClInclude Include="Item.hpp" />
-    <ClInclude Include="Object.hpp" />
+    <ClInclude Include="IWeapon.hpp" />
+    <ClInclude Include="LoadedStage.hpp" />
+    <ClInclude Include="MachineGunWeapon.hpp" />
+    <ClInclude Include="MaguroAI.hpp" />
+    <ClInclude Include="MapParser.hpp" />
     <ClInclude Include="Player.hpp" />
+    <ClInclude Include="PlayerAnimationSet.hpp" />
     <ClInclude Include="Regist.hpp" />
+    <ClInclude Include="ShotgunWeapon.hpp" />
+    <ClInclude Include="StageRepository.hpp" />
     <ClInclude Include="StageSelect.hpp" />
+    <ClInclude Include="StarfishWeapon.hpp" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="TakoAI.hpp" />
     <ClInclude Include="Title.hpp" />
+    <ClInclude Include="WaterGunWeapon.hpp" />
+    <ClInclude Include="WeaponFactory.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App\example\obj\blacksmith.obj">

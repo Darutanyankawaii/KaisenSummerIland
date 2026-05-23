@@ -1,85 +1,48 @@
-﻿#include "Bullet.hpp"
+#include "Bullet.hpp"
 
-Bullet::Bullet(const Vec2& pos, const Vec2& cur) :
-	pos_(pos),
-	dir_(getDir(pos, cur)),
-	bulletSpeed_(10),
-	fallSpeed_(1)
+namespace {
+	constexpr double kFallDecayRate = 5.0;
+	constexpr double kFallSpeedDivisor = 50.0;
+}
+
+Bullet::Bullet(const Vec2& pos, const Vec2& dir, const BulletParams& params)
+	: pos_(pos)
+	, dir_(dir)
+	, size_(params.size)
+	, bulletSpeed_(params.bulletSpeed)
+	, fallSpeed_(params.fallSpeed)
+	, lifeSpan_(params.lifeSpan)
 {
 }
 
-Bullet::Bullet(const Vec2& pos, const Vec2& cur, const int bulletSpeed, const int size) :
-	pos_(pos),
-	dir_(getDir(pos, cur)),
-	bulletSpeed_(bulletSpeed),
-	size_(size)
+Bullet::Bullet(const Vec2& pos, const Vec2& target)
+	: Bullet(pos, directionTo(pos, target), BulletParams{})
 {
 }
 
-Bullet::Bullet(const Vec2& pos, const Vec2& cur, const int bulletSpeed, const double fallSpeed) :
-	pos_(pos),
-	dir_(getDir(pos, cur)),
-	bulletSpeed_(bulletSpeed),
-	fallSpeed_(fallSpeed)
+std::unique_ptr<Bullet> Bullet::createAimed(const Vec2& pos, const Vec2& target,
+	const BulletParams& params)
 {
+	return std::make_unique<Bullet>(pos, directionTo(pos, target), params);
+}
+
+Vec2 Bullet::directionTo(const Vec2& from, const Vec2& to)
+{
+	const Vec2 delta = to - from;
+	const double len = delta.length();
+	if (len < 1e-9)
+	{
+		return Vec2{ 1.0, 0.0 };
+	}
+	return delta / len;
 }
 
 void Bullet::update()
 {
-	//用調整
-	//落下判定
 	if (fallSpeed_ > 0.0)
 	{
-		fallSpeed_ -= Scene::DeltaTime() * 5;
+		fallSpeed_ -= Scene::DeltaTime() * kFallDecayRate;
 	}
-	//移動
-	dir_ += Vec2{ 0.0, fallSpeed_ / 50};
-	pos_ += dir_ * bulletSpeed_ * Scene::DeltaTime() * blockSize;
+	dir_ += Vec2{ 0.0, fallSpeed_ / kFallSpeedDivisor };
+	pos_ += dir_ * bulletSpeed_ * Scene::DeltaTime() * kBlockSize;
 }
-
-Vec2 Bullet::getDir(const Vec2& heroPos, const Vec2& cur)
-{
-	// 三角関数を利用して進行方向を調整
-	int x = (cur.x > heroPos.x ? 1 : -1);
-	int y = (cur.y > heroPos.y ? 1 : -1);
-
-	double tryZ = sqrt(std::pow(Abs(cur.y - heroPos.y), 2.0) + std::pow(Abs(cur.x - heroPos.x), 2.0));
-	double tryX = x * sqrt(std::pow(Abs(cur.x - heroPos.x), 2.0)) / tryZ;
-	double tryY = y * sqrt(std::pow(Abs(cur.y - heroPos.y), 2.0)) / tryZ;
-
-	return Vec2{ tryX, tryY };
-}
-
-BWater_Gun::BWater_Gun(const Vec2& pos, const Vec2& cur) :
-	Bullet(pos, cur, 10, 1)
-{
-
-}
-
-BStarfish_Gun::BStarfish_Gun(const Vec2& pos, const Vec2& cur) :
-	Bullet(pos, cur, 7, 0.5)
-{
-}
-
-BShot_Gun::BShot_Gun(const Vec2& pos, const Vec2& cur) :
-	Bullet(pos, cur, 10, 1.0)
-{
-}
-
-
-BMachine_Gun::BMachine_Gun(const Vec2& pos, const Vec2& cur) :
-	Bullet(pos, cur, 15, 1.0)
-{
-}
-
-
-BBucket_Gun::BBucket_Gun(const Vec2& pos, const Vec2& cur) :
-	Bullet(pos, cur, 7, 0.25)
-{
-}
-
-BGas::BGas(const Vec2& pos, const Vec2& cur) :
-	Bullet(pos, cur, SET_BULLET_SPEED, SET_SIZE)
-{
-}
-

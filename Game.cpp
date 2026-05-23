@@ -1,19 +1,40 @@
-﻿#include "Game.hpp"
+#include "Game.hpp"
 #include "Collision.hpp"
-#include "StageSelect.hpp"
+#include "StageRepository.hpp"
+#include "MapParser.hpp"
+#include "AssetIDs.hpp"
 
+namespace {
+	constexpr int kBackgroundTileCount = 6;
+}
 
 Game::Game(const InitData& init) : IScene{ init }
 {
-	maptip = TextureAsset(U"MAP1");//ステージデータをステージに読み込み
-	registMaptip();
+	player_ = std::make_unique<Player>();
+	player_->setWeapon(static_cast<int>(WeaponName::Water_Gun));
 
-	convertMapData(StageSelect::getStageData(getData().currentStageID).path, normalStage); //ステージのデータを読み込み
+	const StageData stageData = StageRepository::instance().get(getData().currentStageID);
+	loadedStage_ = MapParser::parse(stageData.path);
+
+	mapSize_ = loadedStage_.mapSize;
+	if (loadedStage_.playerStartSet)
+	{
+		player_->setPos(loadedStage_.playerStart);
+		camera_.startPos = player_->getPos().movedBy(0, -1 * kBlockSize);
+		camera_ = CustomCamera2D(camera_.startPos);
+	}
+
+	PutBlocks(loadedStage_);
+	PutEnemy(loadedStage_);
+	PutItem(loadedStage_);
+
+	maptip_ = TextureAsset(GameAssets::Texture::Map1);
+	registMaptip();
 }
 
 Game::~Game()
 {
-	Audio(U"shot").stopAllShots();
+	Audio(GameAssets::Audio::Shot).stopAllShots();
 }
 
 void Game::update()
@@ -21,18 +42,16 @@ void Game::update()
 	Cursor::RequestStyle(CursorStyle::Hidden);
 	ClearPrint();
 
-	// 更新関数
 	updatePlayer();
 	updateEnemies();
 	updateBullets();
 
-	knockBack(); // ノックバックの判定(敵とプレイヤーの衝突)
-	checkItem(); //アイテムの獲得判定
-	player_->lastUpdate(camera, playerBullets_);// プレイヤーの最終更新関数
-	updateCamera(); //Cameraの更新
-	checkGoal(); // ゴール判定
+	knockBack();
+	checkItem();
+	player_->lastUpdate(camera_, playerBullets_);
+	updateCamera();
+	checkGoal();
 
-	//体力がゼロの時にGameOverシーンに遷移
 	if (player_->getHp() <= 0)
 	{
 		changeScene(SceneName::GameOver);
@@ -41,56 +60,48 @@ void Game::update()
 
 void Game::updatePlayer()
 {
-	// プレイヤーのX方向の更新
 	player_->updateX();
+	player_->setPosX(Clamp(player_->getPosX(), 0.0,
+		static_cast<double>(mapSize_.x) - player_->getSizeX()));
 
-	// x方向の移動制限
-	player_->setPosX(Clamp(player_->getPosX(), 0.0, double(mapSize.x - player_->getSizeX())));
+	Collision::CollisionWithWall(blocks_, player_);
 
-	// 壁との当たり判定
-	Collision::CollisionWithWall(blocks, player_);
-
-	// プレイヤーのY方向の更新
 	player_->updateY();
 
-	// 地面との当たり判定
-	Collision::CollisionWithGround(blocks, player_);
+	Collision::CollisionWithGround(blocks_, player_);
 
-	//玉攻撃におけるクールタイム
-	if (!cooltimeFlag)
+	if (!cooltimeFlag_)
 	{
-		bulletAccumulator += Scene::DeltaTime();
-		if (bulletAccumulator > 1)
+		bulletAccumulator_ += Scene::DeltaTime();
+		if (bulletAccumulator_ > 1)
 		{
-			cooltimeFlag = true;
-			bulletAccumulator = 0;
+			cooltimeFlag_ = true;
+			bulletAccumulator_ = 0;
 		}
 	}
 }
 
-void Game::updateEnemies() {
-
-	// 敵のX方向の更新
-	for (auto& enemy : enemies)
+void Game::updateEnemies()
+{
+	for (auto& enemy : enemies_)
 	{
 		enemy->moveX();
-		enemy->setPDir(player_->getDir());
-		enemy->setPPos(player_->getPos());
-		enemy->setPRect(player_->getRectF());
-		enemy->getArea(normalStage.bossArea);
+		enemy->setPlayerDir(player_->getDir());
+		enemy->setPlayerPos(player_->getPos());
+		enemy->setPlayerRect(player_->getRectF());
+		enemy->setBossArea(loadedStage_.bossArea);
 	}
 
-	Collision::CollisionWithWall(blocks, enemies);
+	Collision::CollisionWithWall(blocks_, enemies_);
 
-	// 敵のY方向の更新
-	for (auto& enemy : enemies)
+	for (auto& enemy : enemies_)
 	{
 		enemy->moveY();
 	}
 
-	Collision::CollisionWithGround(blocks, enemies);
+	Collision::CollisionWithGround(blocks_, enemies_);
 
-	for (auto& enemy : enemies)
+	for (auto& enemy : enemies_)
 	{
 		enemy->update();
 	}
@@ -98,270 +109,150 @@ void Game::updateEnemies() {
 
 void Game::updateBullets()
 {
-	//球の移動
 	for (auto& bullet : playerBullets_)
 	{
 		if (!bullet) continue;
 		bullet->update();
 	}
 
-	//プレイヤーと敵の球の当たり判定
-	if (cooltimeFlag)
-	{
-		//cooltimeFlag = Collision::CollisionWithBullet(enemyBullets_, player_);
-	}
+	Collision::CheckBulletsAlive(playerBullets_, blocks_, camera_);
 
-	// プレイヤーの弾とゲーム内のオブジェクトの当たり判定
-	Collision::CheckBulletsAlive(playerBullets_, blocks, camera);
-
-	//ボスのクリア判定要調整
-	if (Collision::CollisionWithBullet(playerBullets_, enemies))
+	if (Collision::CollisionWithBullet(playerBullets_, enemies_))
 	{
 		changeScene(SceneName::GameClear);
 	}
 
-	// 敵の弾とゲーム内のオブジェクトの当たり判定
-	for (auto& enemy : enemies)
+	for (auto& enemy : enemies_)
 	{
-		Collision::CollisionWithBullet(enemy->bullets, player_);
-		Collision::CheckBulletsAlive(enemy->bullets, blocks, camera);
-		// [Todo] Collision::CollisionWithBullet(enemies[i]->enemyBullets, hero);
+		Collision::CollisionWithBullet(enemy->bullets(), player_);
+		Collision::CheckBulletsAlive(enemy->bullets(), blocks_, camera_);
 	}
-
 }
 
-void Game::updateCamera() {
-	camera.update();
+void Game::draw() const
+{
+	{
+		const auto t = camera_.createTransformer();
 
-	// Todo: Y軸方向のUpdate
-	const double halfSceneWidth = Scene::Width() / 2.0f;
-	float x = Clamp(player_->getCenter().x, halfSceneWidth, mapSize.x - halfSceneWidth);
-	camera.setTargetCenter(Vec2(x, camera.getTargetCenter().y));
-}
+		const auto bgSize = TextureAsset(GameAssets::Texture::Background).size();
+		for (int i = -1; i < kBackgroundTileCount - 1; ++i)
+		{
+			TextureAsset(GameAssets::Texture::Background).draw(bgSize.x * i, 0);
+		}
 
-void Game::draw() const {
+		for (const auto& bd : loadedStage_.blocks)
+		{
+			maps_[bd.num].draw(bd.pos);
+		}
+
 #ifdef DEBUGGING
-	Print << U"ma" << maptip.size();
-	Print << U"pos: {:.3}"_fmt(hero.pos);
-	Print << U"speed: {:.3}"_fmt(hero.speed);
-	Print << TextureAsset(U"backGround").size().x;
-	Print << Scene::Width();
-
-	Print << U"killflag ::" << bossKillFlag;
+		for (const auto& block : blocks_)
+		{
+			block.getRegion().drawFrame(1, Palette::Seagreen);
+		}
 #endif
 
-	// tの生存中はカメラ座標に基づいて座標変換が適用される
-	{
-		const auto t = camera.createTransformer();
-
-		//ここをきれいに書きたい
-		for (int i = -1; i < 5; i++)
-		{
-			TextureAsset(U"backGround").draw(TextureAsset(U"backGround").size().x * i, 0);
-		}
-
-		for (const auto& block : blocks)
-		{
-			block.getImage().draw(block.getPos());
-		}
-		// 当たり判定のあるブロックのみ当たり判定を表示
-#ifdef DEBUGGING
-		for (const auto& block : blocks)
-		{
-			block.getRectF().drawFrame(1, Palette::Seagreen);
-		}
-#endif DEBUGGING
-		for(const auto& enemy : enemies)
+		for (const auto& enemy : enemies_)
 		{
 			enemy->draw();
 		}
 
 		for (const auto& bullet : playerBullets_)
 		{
-			TextureAsset(U"bullet").drawAt(bullet->getPos());
+			TextureAsset(GameAssets::Texture::Bullet).drawAt(bullet->getPos());
 		}
 
 		drawItem();
-
-		// プレイヤーの描画
 		player_->draw();
 
-		TextureAsset(U"Lock_on").resized(30).drawAt(Cursor::Pos());
-
-		// 射線を描画する
-		//Line(hero.center(), Cursor::Pos()).draw(2.0, ColorF(1.0, 0.0, 0.0, 0.5));
+		TextureAsset(GameAssets::Texture::LockOn).resized(30).drawAt(Cursor::Pos());
 	}
 
-	// HPを描画
-	for (int i = 0; i < player_->getHp(); i++)
+	for (int i = 0; i < player_->getHp(); ++i)
 	{
-		TextureAsset(U"Heart").drawAt(680 - i * 45, 30);
+		TextureAsset(GameAssets::Texture::Heart).drawAt(680 - i * 45, 30);
 	}
-
-	// 半透明の円を描く
-#ifdef DEBUGGING
-	Circle{ Cursor::Pos(), 10 }.draw(ColorF{ 1.0, 0.0, 0.0, 0.5 });
-#endif
 }
 
-void Game::convertMapData(const String csv_path, Stage& tmpStage)
+void Game::updateCamera()
 {
+	camera_.update();
 
-	CSV csv{ csv_path };
+	const double halfSceneWidth = Scene::Width() / 2.0;
+	const double x = Clamp(player_->getCenter().x, halfSceneWidth,
+		static_cast<double>(mapSize_.x) - halfSceneWidth);
+	camera_.setTargetCenter(Vec2(x, camera_.getTargetCenter().y));
+}
 
-	if (not csv) {
-		throw Error{ U"Failed to load CSV {}"_fmt(csv_path) };
-	}
-
-	mapSize = Point(csv.columns(0), csv.rows()) * blockSize;
-
-	for (int row = 0; row < csv.rows(); row++)
+void Game::PutBlocks(const LoadedStage& stage)
+{
+	for (const auto& bd : stage.blocks)
 	{
-		for (int col = 0; col < csv.columns(row); col++)
+		switch (bd.flag)
 		{
-			const String stageSell = Parse<String>(csv[row][col]);
-			//int sellNumber = (stageSell[1] - '0') * 10 + stageSell[2] - '0'; //要修正 原因空のセルがあるため
-			const Vec2 objectPos = { col * blockSize, row * blockSize };
-			Vec2 imagePos;
-
-			switch (stageSell[0])
-			{
-				case 'p':
-					setPlayer(objectPos);
-					break;
-				case 'B':
-					imagePos = Vec2{ stageSell[2] - '0', stageSell[1] - '0' } * blockSize;
-					putBlocks(objectPos, imagePos, 1);
-					tmpStage.blockData << blockD{ Vec2{ col * blockSize, row * blockSize}, (stageSell[1] - '0') * 10 + stageSell[2] - '0', 1 };
-					break;
-				case 'N':
-					imagePos = Vec2{ stageSell[2] - '0', stageSell[1] - '0' } *blockSize;
-					putBlocks(objectPos, imagePos, -1);
-					tmpStage.blockData << blockD{ Vec2{ col * blockSize, row * blockSize}, (stageSell[1] - '0') * 10 + stageSell[2] - '0', -1 };
-					break;
-				case 'H':
-					imagePos = Vec2{ stageSell[2] - '0', stageSell[1] - '0' } *blockSize;
-					putBlocks(objectPos, imagePos, 2);
-					tmpStage.blockData << blockD{ Vec2{ col * blockSize, row * blockSize}, (stageSell[1] - '0') * 10 + stageSell[2] - '0', 2 };
-					break;
-				case 'i':
-					putItem(objectPos, stageSell.narrow()[1] - '0');
-					tmpStage.itemData << Items{ Vec2{ col * blockSize, row * blockSize}, stageSell.narrow()[1] - '0' };
-					break;
-				case 'E':
-					putEnemy(objectPos, stageSell.narrow()[1] - '0');
-					tmpStage.enemyData << Enemys{ objectPos, 1 };
-					break;
-			}
-
-
-			if (stageSell[0] == 'G') {
-				tmpStage.blockData << blockD{ Vec2{ col * blockSize, row * blockSize}, (stageSell[1] - '0') * 10 + stageSell[2] - '0', 4 };
-			}
-			else if (stageSell[0] == 'C') {
-				Vec2 setBossArea = { (col - 0.5) * blockSize, (row - 0.5) * blockSize };
-				tmpStage.bossArea << setBossArea;
-				if (stageSell[1] == 'N') {
-					tmpStage.blockData << blockD{ Vec2{ col * blockSize, row * blockSize}, (stageSell[1] - '0') * 10 + stageSell[2] - '0', -1 };
-				}
-			}
-			else if (stageSell == U"1") {
-				//ブロックの設定｛x座標,y座標,横の長さ,縦の長さ｝
-				tmpStage.blockData << blockD{ Vec2{ col * blockSize, row * blockSize}, Parse<unsigned int>(stageSell), true };
-			}
+		case 1:
+			blocks_.push_back(Block(RectF{ bd.pos, kBlockSize }, 1));
+			break;
+		case 2:
+			blocks_.push_back(Block(RectF{ bd.pos, kBlockSize, kBlockSize / 2 }, 2));
+			break;
+		case 3:
+			blocks_.push_back(Block(RectF{ bd.pos, kBlockSize, kBlockSize }, 2));
+			break;
+		case 4:
+			blocks_.push_back(Block(RectF{ bd.pos, kBlockSize, kBlockSize }, 4));
+			break;
+		default:
+			break;
 		}
 	}
 }
 
-void Game::setPlayer(const Vec2& pos)
+void Game::PutEnemy(const LoadedStage& stage)
 {
-	player_ = std::make_unique<Player>();
-	player_->setWeapon(static_cast<int>(WeaponName::Water_Gun));//プレイヤーの初期武器を設定
-	player_->setPos(pos);
-	camera.startPos = player_->getPos().movedBy(0, -1 * blockSize);
-	camera = CustomCamera2D(camera.startPos);
-}
-
-void Game::putBlocks(const Vec2& blockPos, const Vec2& blockImagePos, int32 blockNum)
-{
-	const TextureRegion blockImage
-		= maptip(blockImagePos, Vec2(blockSize, blockSize));
-	switch (blockNum)
+	for (const auto& ed : stage.enemies)
 	{
-	case -1://当たり判定のないブロック48x48
-		//当たり判定を調整
-		//blocks.push_back(Block( blockPos, Vec2{ blockSize, blockSize }, blockImage, -1));
-		break;
-	case 1://通常のブロック48x48
-		blocks.push_back(Block( blockPos, Vec2{ blockSize, blockSize }, blockImage, 1));
-		break;
-	case 2://下から移動できるブロック48x24
-		blocks.push_back(Block( blockPos, Vec2{ blockSize, blockSize / 2 }, blockImage, 2));
-		break;
-	case 3://下から移動できるブロック48x48
-		blocks.push_back(Block( blockPos, Vec2{ blockSize, blockSize }, blockImage, 3));
-		break;
-	case 4://ゴールブロック
-		blocks.push_back(Block(blockPos, Vec2{ blockSize, blockSize }, blockImage, 4));
-	}
-}
-
-void Game::putEnemy(const Vec2& enemyPos, int32 enemyNum)
-{
-	switch (enemyNum)
-	{
-	case 1:
-		enemies.push_back(std::make_unique<Curage>(enemyPos));
-		break;
-	case 2:
-		enemies.push_back(std::make_unique<Kani>(enemyPos));
-		break;
-	case 3:
-		enemies.push_back(std::make_unique<Tako>(enemyPos));
-		break;
-	case 9:
-		enemies.push_back(std::make_unique<Maguro>(enemyPos));
-		break;
-	default:
-		enemies.push_back(std::make_unique<Curage>(enemyPos));
-		break;
+		switch (ed.num)
+		{
+		case 1: enemies_.push_back(std::make_unique<Curage>(ed.region)); break;
+		case 2: enemies_.push_back(std::make_unique<Kani>(ed.region));   break;
+		case 3: enemies_.push_back(std::make_unique<Tako>(ed.region));   break;
+		case 9: enemies_.push_back(std::make_unique<Maguro>(ed.region)); break;
+		default: break;
+		}
 	}
 }
 
 void Game::registMaptip()
 {
-	const Vec2 mapSize = maptip.size();
+	const Size sizeI = maptip_.size();
+	const int sizeX = sizeI.x;
+	const int sizeY = sizeI.y;
 
-	for (int i = 0; i < mapSize.y / blockSize; i++)
+	for (int i = 0; i < sizeY / kBlockSize; ++i)
 	{
-		for (int j = 0; j < mapSize.x / blockSize; j++)
+		for (int j = 0; j < sizeX / kBlockSize; ++j)
 		{
-			maps << maptip(j * blockSize, i * blockSize, blockSize, blockSize);
+			maps_ << maptip_(j * kBlockSize, i * kBlockSize, kBlockSize, kBlockSize);
 		}
 	}
 }
 
 void Game::knockBack()
 {
-	// playerとenemiesが衝突した際、1秒ごとにhero.HPが１減少し、ノックバック
-	player_->knockBackToEnemy(enemies);
+	player_->knockBackToEnemy(enemies_);
 }
 
 void Game::checkGoal()
 {
-	for (auto& block : blocks)
+	for (const auto& block : blocks_)
 	{
-		if (block.getFunction() == 4)
+		if (block.getFlag() == 4 && block.getRegion().intersects(player_->getRectF()))
 		{
-			if (block.getRectF().intersects(player_->getRectF()))
-			{
-				// 次のシーンに移動する
-				int currentStageID = getData().currentStageID;
-				getData().currentStageID = StageSelect::getStageData(currentStageID).nextStageID;
-				changeScene(SceneName::Game);
-			}
+			const int currentStageID = getData().currentStageID;
+			getData().currentStageID = StageRepository::instance().get(currentStageID).nextStageID;
+			changeScene(SceneName::Game);
+			return;
 		}
 	}
 }
-
-

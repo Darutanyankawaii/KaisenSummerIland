@@ -1,105 +1,68 @@
-﻿#pragma once
-# include "Basic.hpp"
+#pragma once
+#include "Basic.hpp"
 
-enum class WeaponName //武器番号
+// 武器番号 (マップデータと一致させる必要があるため値は変更しない)
+enum class WeaponName
 {
-	Water_Gun,   //0
-	Starfish,    //1
-	Shotgun,     //2
-	Machine_Gun, //3
-	Bucket,      //4
+	Water_Gun,   // 0
+	Starfish,    // 1
+	Shotgun,     // 2
+	Machine_Gun, // 3
+	Bucket,      // 4
+};
+
+// 弾の挙動パラメータ。武器ごとに異なる組合せを持たせる。
+struct BulletParams
+{
+	double bulletSpeed = 10.0; // 弾速 (ブロック単位/秒)
+	double fallSpeed = 1.0;    // 落下開始までのカウント
+	int size = 8;              // 当たり判定の半径 (px)
+	double lifeSpan = 3.0;     // 寿命 (秒)
 };
 
 class Bullet
 {
 public:
-	Bullet() = default;
-	Bullet(const Vec2&, const Vec2&);
-	Bullet(const Vec2&, const Vec2&, const int, const int);
-	Bullet(const Vec2&, const Vec2&, const int, const double);
-	virtual ~Bullet() = default;
+	// dir は単位ベクトル前提。createAimed() を経由するのが推奨。
+	Bullet(const Vec2& pos, const Vec2& dir, const BulletParams& params);
 
-	virtual void update();
+	// 互換コンストラクタ: pos→target 方向に飛ばす (内部で正規化)
+	Bullet(const Vec2& pos, const Vec2& target);
 
-	void setPos(Vec2& pos) { pos_ = pos; };
-	void setDir(Vec2& dir) { dir_ = dir; };
-	void setFallSpeed(double fallSpeed) { fallSpeed_ = fallSpeed; };
+	// (Maguro 拡散弾のように) target が方向そのものでも吸収する。
+	static std::unique_ptr<Bullet> createAimed(const Vec2& pos, const Vec2& target,
+		const BulletParams& params);
 
-	void additionPos(Vec2 pos) { pos_ += pos; };
-	void additionDir(Vec2 dir) { dir_ += dir; };
-	void additionFallSpeed(double fallSpeed) { fallSpeed_ += fallSpeed; };
+	// pos から target への単位ベクトル。同位置の場合 (1,0) を返す。
+	static Vec2 directionTo(const Vec2& from, const Vec2& to);
 
-	Vec2 getPos() const { return pos_; };
-	Vec2 getDir() const { return dir_; };
-	double getFallSpeed() const { return fallSpeed_; };
+	void update();
+
+	// ---- アクセサ (カプセル化) ----
+	const Vec2& position() const { return pos_; }
+	Vec2 getPos() const { return pos_; } // 旧 API
+	Vec2 getDir() const { return dir_; }
 	Circle getCircle() const { return Circle(pos_, size_); }
+	double getLifeSpan() const { return lifeSpan_; }
+	bool isHit() const { return hit_; }
+	int getSize() const { return size_; }
 
-	double LifeSpan = 3.0;
-	bool hit = false;
-protected:
-	Vec2 pos_;		// 弾の座標
-	Vec2 dir_;		// 弾の進む方向
-	int32 size_ = 8;	// 弾のサイズ(半径)
+	void decreaseLifeSpan(double dt) { lifeSpan_ -= dt; }
+	void markHit() { hit_ = true; }
+
+	void addPos(const Vec2& delta) { pos_ += delta; }
+	void addDir(const Vec2& delta) { dir_ += delta; }
+
+	// 旧 API 互換 (削除予定)
+	void additionPos(const Vec2& delta) { addPos(delta); }
+	void additionDir(const Vec2& delta) { addDir(delta); }
+
+private:
+	Vec2 pos_;
+	Vec2 dir_;
+	int size_;
 	double bulletSpeed_;
-	double fallSpeed_ = 1; // 落下開始までの時間
-private:
-	Vec2 getDir(const Vec2&, const Vec2&);
-};
-
-//各武器の弾は、dirに方向ではなくそのまま速度ベクトルを入れています
-//水鉄砲の弾
-class BWater_Gun : public Bullet
-{
-public:
-	BWater_Gun(const Vec2&, const Vec2&);
-private:
-	int SET_BULLET_SPEED = 10;
-	const double SET_FALL_SPEED = 1.0;
-};
-
-//ヒトデの弾
-class BStarfish_Gun : public Bullet
-{
-public:
-	BStarfish_Gun(const Vec2&, const Vec2&);
-private:
-	const int32 SET_BULLET_SPEED = 7;
-	const double SET_FALL_SPEED = 0.5;
-};
-
-//散弾銃の弾
-class BShot_Gun : public Bullet
-{
-public:
-	BShot_Gun(const Vec2&, const Vec2&);
-private:
-	const int32 SET_BULLET_SPEED = 10;
-	const double SET_FALL_SPEED = 1.0;
-};
-
-//機関銃の弾
-class BMachine_Gun : public Bullet {
-public:
-	BMachine_Gun(const Vec2&, const Vec2&);
-private:
-	const int32 SET_BULLET_SPEED = 15;
-	const double SET_FALL_SPEED = 1.0;
-};
-
-//バケツの弾
-class BBucket_Gun : public Bullet {
-public:
-	BBucket_Gun(const Vec2&, const Vec2&);
-private:
-	const int32 SET_BULLET_SPEED = 7;
-	const double SET_FALL_SPEED = 0.25;
-};
-
-class BGas : public Bullet {
-public:
-	BGas(const Vec2&, const Vec2&);
-
-private:
-	int SET_SIZE = 30;
-	int SET_BULLET_SPEED = 1;
+	double fallSpeed_;
+	double lifeSpan_;
+	bool hit_ = false;
 };

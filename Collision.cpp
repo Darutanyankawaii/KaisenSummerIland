@@ -1,127 +1,122 @@
-﻿#include "Collision.hpp"
+#include "Collision.hpp"
 #include "Player.hpp"
 #include "Bullet.hpp"
 #include "Block.hpp"
 #include "Enemy.hpp"
 #include "Camera.hpp"
 
-// 壁とプレイヤーの当たり判定
+namespace {
+	constexpr double kCollisionEpsilon = FLT_EPSILON;
+	constexpr double kBulletAliveAreaScale = 1.5;
+
+	// --- 壁との当たり判定 (共通テンプレート) ---
+	// Entity は getPosX/setPosX/getSpeedX/getSizeX/getRectF を持つこと。
+	template<class Entity, class OnRightHit, class OnLeftHit>
+	void resolveWallTouch(const RectF& blockRegion, Entity& e,
+		OnRightHit onRight, OnLeftHit onLeft)
+	{
+		// 右側面が壁にぶつかった場合
+		if (e.getSpeedX() > 0)
+		{
+			if (blockRegion.intersects(e.getRectF().right().stretched(-kCollisionEpsilon)))
+			{
+				e.setPosX(blockRegion.leftCenter().x - e.getSizeX() - kCollisionEpsilon);
+				onRight();
+			}
+		}
+		// 左側面が壁にぶつかった場合
+		if (e.getSpeedX() < 0)
+		{
+			if (blockRegion.intersects(e.getRectF().left().stretched(-kCollisionEpsilon)))
+			{
+				e.setPosX(blockRegion.rightCenter().x + kCollisionEpsilon);
+				onLeft();
+			}
+		}
+	}
+
+	// --- 床/天井との当たり判定 (共通テンプレート) ---
+	template<class Entity>
+	void resolveGroundTouchSolid(const RectF& blockRegion, Entity& e,
+		bool useGroundFlag, bool& outGroundedThisBlock)
+	{
+		// 床補正
+		if (blockRegion.intersects(e.getRectF().bottom()))
+		{
+			const double blockTop = blockRegion.topCenter().y;
+			if (e.getPosY() + e.getSizeY() > blockTop)
+			{
+				e.setPosY(blockTop - e.getSizeY());
+			}
+			e.setSpeedY(0);
+			if (useGroundFlag) outGroundedThisBlock = true;
+		}
+
+		// 天井補正
+		if (e.getSpeedY() < 0)
+		{
+			if (blockRegion.intersects(e.getRectF().top()))
+			{
+				const double blockBottom = blockRegion.bottomCenter().y;
+				if (e.getPosY() - e.getSizeY() < blockBottom)
+				{
+					e.setPosY(blockBottom + kCollisionEpsilon);
+				}
+				e.setSpeedY(0);
+			}
+		}
+	}
+}
+
+// ===== 壁との当たり判定 =====
+
 void Collision::CollisionWithWall(const Array<Block>& blocks, std::unique_ptr<Player>& player)
 {
-	//ブロックの壁部分とプレイヤーの位置補正
-	for (auto& block : blocks)
+	for (const auto& block : blocks)
 	{
-		if (block.getFunction() == 1) {
-			//プレイヤー右側面がブロックと接触
-			if (player->getSpeedX() > 0)
-			{
-				if (block.getRectF().intersects(player->getRectF().right().stretched(-FLT_EPSILON)))   //FLT_EPSILON＝ものすごく小さい数0.0000000001
-				{
-					player->setSpeedX(block.getRectF().leftCenter().x - player->getSizeX() - FLT_EPSILON);
-					player->setSpeedX(0);
-				}
-			}
-			//プレイヤー左側面がブロックと接触
-			if (player->getSpeedX() < 0) {
-				if (block.getRectF().intersects(player->getRectF().left().stretched(-FLT_EPSILON)))
-				{
-					player->setSpeedX(block.getRectF().rightCenter().x + FLT_EPSILON);
-					player->setSpeedX(0);
-				}
-			}
-		}
+		if (block.getFlag() != 1) continue;
+		resolveWallTouch(block.getRegion(), *player,
+			[&] { player->setSpeedX(0); },
+			[&] { player->setSpeedX(0); });
 	}
 }
 
-// 壁と敵の当たり判定
 void Collision::CollisionWithWall(const Array<Block>& blocks, Array<std::unique_ptr<Enemy>>& enemies)
 {
-	//ブロックの壁部分とプレイヤーの位置補正
-	for (auto& block : blocks)
+	for (const auto& block : blocks)
 	{
-		if (block.getFunction() == 1)
+		if (block.getFlag() != 1) continue;
+		for (auto& enemy : enemies)
 		{
-			for (auto& enemy : enemies)
-			{
-				if (enemy->hitbox == true)
-				{
-					// enemy右側面がブロックと接触
-					if (enemy->speed_.x > 0)
-					{
-						if (block.getRectF().intersects(enemy->getRectF().right().stretched(-FLT_EPSILON)))   //FLT_EPSILON＝ものすごく小さい数0.0000000001
-						{
-							enemy->pos_.x = block.getRectF().leftCenter().x - enemy->SIZE.x - FLT_EPSILON;
-							enemy->dir = false;
-#ifdef DEBUGGING
-							Print << U"Collision: {}"_fmt(j);
-#endif
-						}
-					}
-
-					// enemy左側面がブロックと接触
-					if (enemy->speed_.x < 0) {
-						if (block.getRectF().intersects(enemy->getRectF().left().stretched(-FLT_EPSILON)))
-						{
-							enemy->pos_.x = block.getRectF().rightCenter().x + FLT_EPSILON;
-							enemy->dir = true;
-#ifdef DEBUGGING
-							Print << U"Collision: {}"_fmt(j);
-#endif
-						}
-					}
-				}
-			}
+			if (!enemy->hasHitbox()) continue;
+			resolveWallTouch(block.getRegion(), *enemy,
+				[&] { enemy->setFacingRight(false); },
+				[&] { enemy->setFacingRight(true); });
 		}
 	}
 }
 
-// 床とプレイヤーの当たり判定
+// ===== 床/天井 =====
+
 void Collision::CollisionWithGround(const Array<Block>& blocks, std::unique_ptr<Player>& player)
 {
 	player->setGround(false);
 
-	for (auto& block :blocks)
+	for (const auto& block : blocks)
 	{
-		if (block.getFunction() == 1)
+		if (block.getFlag() == 1)
 		{
-			//ブロックの床部分とプレイヤーの位置補正
-			if (block.getRectF().intersects(player->getRectF().bottom()))
-				//RectF[A].intersect(RectF[B]) AとBの図形が重なったときに[TRUE]を返す 
-			{
-				//プレイヤーの位置補正
-				const double blockY = block.getRectF().topCenter().y;
-				if (player->getPosY() + player->getSizeY() > blockY)
-				{
-					player->setPosY(blockY - player->getSizeY());
-				}
-				player->setSpeedY(0);
-				player->setGround(true);
-			}
-
-			//ブロックの最下部とプレイヤーの位置補正
-			if (player->getSpeedY() < 0)
-			{
-				if (block.getRectF().intersects(player->getRectF().top()))
-				{
-					//プレイヤーの位置補正
-					const double blockY = block.getRectF().bottomCenter().y;
-					if (player->getPosY() - player->getSizeY() < blockY)
-					{
-						player->setPosY(blockY + FLT_EPSILON);
-					}
-					player->setSpeedY(0);
-				}
-			}
+			bool grounded = false;
+			resolveGroundTouchSolid(block.getRegion(), *player, true, grounded);
+			if (grounded) player->setGround(true);
 		}
 		else
 		{
-			//ブロックの床部分とプレイヤーの位置補正
-			if (block.getRectF().intersects(player->getRectF().bottom()) && player->getSpeedY() >= 0)
-				//RectF[A].intersect(RectF[B]) AとBの図形が重なったときに[TRUE]を返す 
+			// 上からのみ着地できる薄いブロック等
+			if (block.getRegion().intersects(player->getRectF().bottom()) && player->getSpeedY() >= 0)
 			{
-				////プレイヤーの位置補正
-				const double blockY = block.getRectF().topCenter().y;
-				player->setPosY(blockY - player->getSizeY());
+				const double blockTop = block.getRegion().topCenter().y;
+				player->setPosY(blockTop - player->getSizeY());
 				player->setSpeedY(0);
 				player->setGround(true);
 			}
@@ -129,127 +124,83 @@ void Collision::CollisionWithGround(const Array<Block>& blocks, std::unique_ptr<
 	}
 }
 
-// 床と敵の当たり判定
 void Collision::CollisionWithGround(const Array<Block>& blocks, Array<std::unique_ptr<Enemy>>& enemies)
 {
-	for (auto& block :blocks)
+	for (const auto& block : blocks)
 	{
 		for (auto& enemy : enemies)
 		{
-			if (enemy->hitbox == true)
+			if (!enemy->hasHitbox()) continue;
+
+			if (block.getFlag() == 1)
 			{
-				if (block.getFunction() == 1)
+				bool grounded = false; // 敵では未使用
+				resolveGroundTouchSolid(block.getRegion(), *enemy, false, grounded);
+				// 着地系の補正後、敵の縦加速も 0 に
+				if (enemy->getSpeedY() == 0)
 				{
-					//ブロックの床部分とプレイヤーの位置補正
-					//RectF[A].intersect(RectF[B]) AとBの図形が重なったときに[TRUE]を返す
-					if (block.getRectF().intersects(enemy->getRectF().bottom()))
-					{
-						//プレイヤーの位置補正
-						double blockY = block.getRectF().topCenter().y;
-						if (enemy->pos_.y + enemy->SIZE.y > blockY)
-						{
-							enemy->pos_.y = blockY - enemy->SIZE.y - FLT_EPSILON;
-						}
-						enemy->speed_.y = 0;
-						enemy->accel_.y = 0;
-					}
-
-					//ブロックの最下部と敵の位置補正
-					if (enemy->speed_.y < 0)
-					{
-						if (block.getRectF().intersects(enemy->getRectF().top()))
-						{
-							//敵の位置補正
-							double blockY = block.getRectF().bottomCenter().y;
-							if (enemy->pos_.y - enemy->SIZE.y < blockY)
-							{
-								enemy->pos_.y = blockY + FLT_EPSILON;
-							}
-							enemy->speed_.y = 0;
-							enemy->accel_.y = 0;
-						}
-					}
+					enemy->setAccelY(0);
 				}
-				else
-				{
-					//ブロックの床部分とプレイヤーの位置補正
-					//RectF[A].intersect(RectF[B]) AとBの図形が重なったときに[TRUE]を返す
-					if (block.getRectF().intersects(enemy->getRectF().bottom()) && enemy->speed_.y >= 0)
-					{
-						//プレイヤーの位置補正
-						double blockY = block.getRectF().topCenter().y;
-						enemy->pos_.y = blockY - enemy->SIZE.y;
-						enemy->speed_.y = 0;
-					}
-				}
-			}
-		}
-	}
-}
-// 弾の生存判定 (壁との衝突、画面外判定)
-void Collision::CheckBulletsAlive(Array<std::unique_ptr<Bullet>>& bullets, const Array<Block>& blocks, const CustomCamera2D& camera)
-{
-	// 画面の範囲外にでたとき
-	const Vec2 leftTop = camera.getMat3x2().inverse().transformPoint(Float2(0, 0));
-	const RectF area = RectF(leftTop, SCENE_WIDTH, SCENE_HEIGHT).scaled(1.5, 1.5);
-	for (auto it = bullets.begin(); it != bullets.end();)
-	{
-		if (!area.contains((*it)->getCircle()))
-		{
-			it = bullets.erase(it);
-		}
-		else
-		{
-			++it;
-		}
-
-	}
-
-	// ブロックと衝突したとき
-	for (const auto& block : blocks)
-	{
-		for (auto it = bullets.begin(); it != bullets.end();)
-		{
-			if (block.getRectF().intersects((*it)->getCircle()))
-			{
-				it = bullets.erase(it);
 			}
 			else
 			{
-				++it;
+				if (block.getRegion().intersects(enemy->getRectF().bottom()) && enemy->getSpeedY() >= 0)
+				{
+					const double blockTop = block.getRegion().topCenter().y;
+					enemy->setPosY(blockTop - enemy->getSizeY());
+					enemy->setSpeedY(0);
+				}
 			}
 		}
 	}
 }
 
-// 弾と敵の当たり判定
-bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets, Array<std::unique_ptr<Enemy>>& enemies)
+// ===== 弾の生存判定 =====
+
+void Collision::CheckBulletsAlive(Array<std::unique_ptr<Bullet>>& bullets,
+	const Array<Block>& blocks, const CustomCamera2D& camera)
 {
-	// 敵と衝突したとき
+	// 画面外を削除
+	const Vec2 leftTop = camera.getMat3x2().inverse().transformPoint(Float2(0, 0));
+	const RectF area = RectF(leftTop, SCENE_WIDTH, SCENE_HEIGHT)
+		.scaled(kBulletAliveAreaScale, kBulletAliveAreaScale);
+
+	bullets.remove_if([&](const std::unique_ptr<Bullet>& b) {
+		return !area.contains(b->getCircle());
+		});
+
+	// ブロックと衝突した弾を削除
+	bullets.remove_if([&](const std::unique_ptr<Bullet>& b) {
+		for (const auto& block : blocks)
+		{
+			if (block.getRegion().intersects(b->getCircle())) return true;
+		}
+		return false;
+		});
+}
+
+// ===== 弾と敵 =====
+
+bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
+	Array<std::unique_ptr<Enemy>>& enemies)
+{
+	bool bossKilled = false;
+
 	for (auto enemy = enemies.begin(); enemy != enemies.end();)
 	{
-		bool isDelete = false;
+		bool enemyDead = false;
 
 		for (auto bt = bullets.begin(); bt != bullets.end();)
 		{
 			if ((*enemy)->getRectF().intersects((*bt)->getCircle()))
 			{
 				bt = bullets.erase(bt);
+				(*enemy)->takeDamage(1);
 
-				(*enemy)->hp_--;
-
-				if ((*enemy)->hp_ < 1)
+				if ((*enemy)->getHp() < 1)
 				{
-					if ((*enemy)->ID == -1)
-					{
-						enemy = enemies.erase(enemy);
-						return true;
-					}
-					else
-					{
-						enemy = enemies.erase(enemy);
-					}
-					isDelete = true;
+					if ((*enemy)->isBoss()) bossKilled = true;
+					enemyDead = true;
 				}
 				break;
 			}
@@ -259,7 +210,12 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets, Arr
 			}
 		}
 
-		if (!isDelete)
+		if (enemyDead)
+		{
+			enemy = enemies.erase(enemy);
+			if (bossKilled) return true;
+		}
+		else
 		{
 			++enemy;
 		}
@@ -268,8 +224,10 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets, Arr
 	return false;
 }
 
-// 弾と主人公の当たり判定
-bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets, std::unique_ptr<Player>& player)
+// ===== 弾とプレイヤー =====
+
+bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
+	std::unique_ptr<Player>& player)
 {
 	for (auto bt = bullets.begin(); bt != bullets.end();)
 	{
@@ -277,21 +235,20 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets, std
 		{
 			bt = bullets.erase(bt);
 			player->receiveDamage(1);
-			return false;
-			break;
+			return true;
 		}
-		else
-		{
-			++bt;
-		}
+		++bt;
 	}
-	return true;
+	return false;
 }
 
-void Collision::CollisionWithBullet(std::unique_ptr<Bullet>& bullet, std::unique_ptr<Player>& player)
+void Collision::CollisionWithBullet(std::unique_ptr<Bullet>& bullet,
+	std::unique_ptr<Player>& player)
 {
+	if (!bullet || bullet->isHit()) return;
 	if (player->getRectF().intersects(bullet->getCircle()))
 	{
 		player->receiveDamage(1);
+		bullet->markHit();
 	}
 }
