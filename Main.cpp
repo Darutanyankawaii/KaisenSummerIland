@@ -1,96 +1,57 @@
 ﻿# include <Siv3D.hpp> // Siv3D v0.6.16
+# include "Basic.hpp"
+# include "Regist.hpp"
+# include "Game.hpp"
+# include "StageSelect.hpp"
+
+# include "Title.hpp"
+# include "GameOver.hpp"
+# include "GameClear.hpp"
+# include "How2Play.hpp"
 
 void Main()
 {
-	// 背景の色を設定する | Set the background color
-	Scene::SetBackground(ColorF{ 0.6, 0.8, 0.7 });
+	//ウィンドウサイズの変更
+	Window::Resize(SCENE_WIDTH, SCENE_HEIGHT);
 
-	// 画像ファイルからテクスチャを作成する | Create a texture from an image file
-	const Texture texture{ U"example/windmill.png" };
+	//シーンの追加方法
+	//1,テンプレ文をもとにテンプレに追加したいシーンの名前を書きmanagerに加える
+	//2,Basic.hにある「enum class SceneName」の中に1で作成したシーンの名前を書き込む
+	//3,作りたいシーンの.hファイルと.cppファイルを作成する。
+	//4,作りたいシーンの.hファイルを#includeする。
 
-	// 絵文字からテクスチャを作成する | Create a texture from an emoji
-	const Texture emoji{ U"🦖"_emoji };
+	App manager;
+	manager
+		.add<Title>(SceneName::Title)
+		.add<StageSelect>(SceneName::StageSelect)
+		.add<Game>(SceneName::Game)
+		.add<GameOver>(SceneName::GameOver)
+		.add<How2Play>(SceneName::How2Play)
+		.add<GameClear>(SceneName::GameClear)
+		;
 
-	// 太文字のフォントを作成する | Create a bold font with MSDF method
-	const Font font{ FontMethod::MSDF, 48, Typeface::Bold };
+	Scene::SetBackground(ColorF{ 1.0, 1.0, 1.0 });// 背景の色を設定 | Set background color
 
-	// テキストに含まれる絵文字のためのフォントを作成し、font に追加する | Create a font for emojis in text and add it to font as a fallback
-	const Font emojiFont{ 48, Typeface::ColorEmoji };
-	font.addFallback(emojiFont);
+	RegisterAudioAsset();
+	RegisterFontAsset();
+	ResisterTextureAsset();
 
-	// ボタンを押した回数 | Number of button presses
-	int32 count = 0;
-
-	// チェックボックスの状態 | Checkbox state
-	bool checked = false;
-
-	// プレイヤーの移動スピード | Player's movement speed
-	double speed = 200.0;
-
-	// プレイヤーの X 座標 | Player's X position
-	double playerPosX = 400;
-
-	// プレイヤーが右を向いているか | Whether player is facing right
-	bool isPlayerFacingRight = true;
+	const int FPS = 60;	// 1秒間に1画面を書き換える回数
+	Stopwatch sw;
+	sw.start();
 
 	while (System::Update())
 	{
-		// テクスチャを描く | Draw the texture
-		texture.draw(20, 20);
+		AudioAsset(U"bgm").setLoop(true);
+		AudioAsset(U"bgm").play();
 
-		// テキストを描く | Draw text
-		font(U"Hello, Siv3D!🎮").draw(64, Vec2{ 20, 340 }, ColorF{ 0.2, 0.4, 0.8 });
-
-		// 指定した範囲内にテキストを描く | Draw text within a specified area
-		font(U"Siv3D (シブスリーディー) は、ゲームやアプリを楽しく簡単な C++ コードで開発できるフレームワークです。")
-			.draw(18, Rect{ 20, 430, 480, 200 }, Palette::Black);
-
-		// 長方形を描く | Draw a rectangle
-		Rect{ 540, 20, 80, 80 }.draw();
-
-		// 角丸長方形を描く | Draw a rounded rectangle
-		RoundRect{ 680, 20, 80, 200, 20 }.draw(ColorF{ 0.0, 0.4, 0.6 });
-
-		// 円を描く | Draw a circle
-		Circle{ 580, 180, 40 }.draw(Palette::Seagreen);
-
-		// 矢印を描く | Draw an arrow
-		Line{ 540, 330, 760, 260 }.drawArrow(8, SizeF{ 20, 20 }, ColorF{ 0.4 });
-
-		// 半透明の円を描く | Draw a semi-transparent circle
-		Circle{ Cursor::Pos(), 40 }.draw(ColorF{ 1.0, 0.0, 0.0, 0.5 });
-
-		// ボタン | Button
-		if (SimpleGUI::Button(U"count: {}"_fmt(count), Vec2{ 520, 370 }, 120, (checked == false)))
+		if (!manager.update())
 		{
-			// カウントを増やす | Increase the count
-			++count;
+			break;
 		}
 
-		// チェックボックス | Checkbox
-		SimpleGUI::CheckBox(checked, U"Lock \U000F033E", Vec2{ 660, 370 }, 120);
-
-		// スライダー | Slider
-		SimpleGUI::Slider(U"speed: {:.1f}"_fmt(speed), speed, 100, 400, Vec2{ 520, 420 }, 140, 120);
-
-		// 左キーが押されていたら | If left key is pressed
-		if (KeyLeft.pressed())
-		{
-			// プレイヤーが左に移動する | Player moves left
-			playerPosX = Max((playerPosX - speed * Scene::DeltaTime()), 60.0);
-			isPlayerFacingRight = false;
-		}
-
-		// 右キーが押されていたら | If right key is pressed
-		if (KeyRight.pressed())
-		{
-			// プレイヤーが右に移動する | Player moves right
-			playerPosX = Min((playerPosX + speed * Scene::DeltaTime()), 740.0);
-			isPlayerFacingRight = true;
-		}
-
-		// プレイヤーを描く | Draw the player
-		emoji.scaled(0.75).mirrored(isPlayerFacingRight).drawAt(playerPosX, 540);
+		while (sw.msF() < 1000.0 / FPS);    //1/60秒経過するまでループ
+		sw.restart();
 	}
 }
 
