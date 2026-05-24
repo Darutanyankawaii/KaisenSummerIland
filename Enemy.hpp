@@ -212,7 +212,7 @@ public:
 	int getAnimeDir() const { return animeDir_; }
 
 	static constexpr int IMAGE_NUM = 2;
-	static constexpr int BOSS_HP = 60;
+	static constexpr int BOSS_HP = 20;
 	static constexpr int BOSS_ID = -1;
 
 private:
