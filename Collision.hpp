@@ -28,10 +28,6 @@ namespace Collision
 	bool CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 		std::unique_ptr<Player>& player);
 
-	// 単一の弾とプレイヤーの当たり判定 (ヒットしたら markHit)
-	void CollisionWithBullet(std::unique_ptr<Bullet>& bullet,
-		std::unique_ptr<Player>& player);
-
 	// 弾配列と敵配列の当たり判定 (ボス撃破で true)
 	bool CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 		Array<std::unique_ptr<Enemy>>& enemies);

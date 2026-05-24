@@ -243,13 +243,3 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 	return false;
 }
 
-void Collision::CollisionWithBullet(std::unique_ptr<Bullet>& bullet,
-	std::unique_ptr<Player>& player)
-{
-	if (!bullet || bullet->isHit()) return;
-	if (player->getRectF().intersects(bullet->getCircle()))
-	{
-		player->receiveDamage(1);
-		bullet->markHit();
-	}
-}
