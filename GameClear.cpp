@@ -1,10 +1,12 @@
 #include "GameClear.hpp"
 #include "AssetIDs.hpp"
 #include "SoundSystem.hpp"
+#include "SaveManager.hpp"
 
 GameClear::GameClear(const InitData& init) : IScene{ init }
 {
 	Scene::SetBackground(Palette::Yellow);
+	SaveManager::instance().recordCleared(getData().currentStageID);
 }
 
 void GameClear::update()

@@ -134,6 +134,7 @@
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="PlayerAnimationSet.cpp" />
     <ClCompile Include="ShotgunWeapon.cpp" />
+    <ClCompile Include="SaveManager.cpp" />
     <ClCompile Include="SoundSystem.cpp" />
     <ClCompile Include="StageRepository.cpp" />
     <ClCompile Include="StageSelect.cpp" />
@@ -375,6 +376,7 @@
     <ClInclude Include="PlayerAnimationSet.hpp" />
     <ClInclude Include="Regist.hpp" />
     <ClInclude Include="ShotgunWeapon.hpp" />
+    <ClInclude Include="SaveManager.hpp" />
     <ClInclude Include="SoundSystem.hpp" />
     <ClInclude Include="StageRepository.hpp" />
     <ClInclude Include="StageSelect.hpp" />

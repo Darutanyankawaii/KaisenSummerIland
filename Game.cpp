@@ -4,6 +4,7 @@
 #include "MapParser.hpp"
 #include "AssetIDs.hpp"
 #include "SoundSystem.hpp"
+#include "SaveManager.hpp"
 
 namespace {
 	constexpr int kBackgroundTileCount = 6;
@@ -350,8 +351,17 @@ void Game::checkGoal()
 		{
 			Sound::play(Sound::SE::StageClear);
 			const int currentStageID = getData().currentStageID;
-			getData().currentStageID = StageRepository::instance().get(currentStageID).nextStageID;
-			changeScene(SceneName::Game);
+			SaveManager::instance().recordCleared(currentStageID);
+			const int nextID = StageRepository::instance().get(currentStageID).nextStageID;
+			if (nextID > 0 && StageRepository::instance().contains(nextID))
+			{
+				getData().currentStageID = nextID;
+				changeScene(SceneName::Game);
+			}
+			else
+			{
+				changeScene(SceneName::GameClear);
+			}
 			return;
 		}
 	}
