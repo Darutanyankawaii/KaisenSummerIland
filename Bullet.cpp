@@ -15,11 +15,6 @@ Bullet::Bullet(const Vec2& pos, const Vec2& dir, const BulletParams& params)
 {
 }
 
-Bullet::Bullet(const Vec2& pos, const Vec2& target)
-	: Bullet(pos, directionTo(pos, target), BulletParams{})
-{
-}
-
 std::unique_ptr<Bullet> Bullet::createAimed(const Vec2& pos, const Vec2& target,
 	const BulletParams& params)
 {
