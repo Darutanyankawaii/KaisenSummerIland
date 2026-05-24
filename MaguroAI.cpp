@@ -61,7 +61,7 @@ void MaguroAI::tick(Maguro& self, double dt)
 		if (reachedTarget || timedOut)
 		{
 			if (reachedTarget) self.setPosY(self.getPosY() - 5.0); // 着地補正
-			self.setHitbox(true);
+			self.setTerrainCollision(true);
 			self.setGravity(0.1f);
 			self.setSpeed({ 0, 0 });
 			auto& anims = self.animations();
@@ -115,7 +115,7 @@ void MaguroAI::enterRushing(Maguro& self)
 	rushTimer_ = 0.0;
 	const Vec2 dir = unitDirection(self.getPos(), rushTarget_);
 	self.setSpeed(dir * kRushSpeed);
-	self.setHitbox(false);
+	self.setTerrainCollision(false);
 	self.setAnimeFlag(false);
 }
 

@@ -88,7 +88,7 @@ void Collision::CollisionWithWall(const Array<Block>& blocks, Array<std::unique_
 		if (block.getFlag() != 1) continue;
 		for (auto& enemy : enemies)
 		{
-			if (!enemy->hasHitbox()) continue;
+			if (!enemy->hasTerrainCollision()) continue;
 			resolveWallTouch(block.getRegion(), *enemy,
 				[&] { enemy->setFacingRight(false); },
 				[&] { enemy->setFacingRight(true); });
@@ -130,7 +130,7 @@ void Collision::CollisionWithGround(const Array<Block>& blocks, Array<std::uniqu
 	{
 		for (auto& enemy : enemies)
 		{
-			if (!enemy->hasHitbox()) continue;
+			if (!enemy->hasTerrainCollision()) continue;
 
 			if (block.getFlag() == 1)
 			{
