@@ -38,7 +38,8 @@ void MaguroAI::tick(Maguro& self, double dt)
 	case MaguroPhase::Idle:
 	{
 		idleTimer_ += dt;
-		if (idleTimer_ > kIdleInterval)
+		const double idleInterval = isEnraged(self) ? 0.2 : kIdleInterval;
+		if (idleTimer_ > idleInterval)
 		{
 			idleTimer_ = 0.0;
 			switch (Random(3))
@@ -77,8 +78,9 @@ void MaguroAI::tick(Maguro& self, double dt)
 		if (len > 1e-6)
 		{
 			const Vec2 desired = (toPlayer / len) * kRushSpeed;
-			constexpr double kTrackBlend = 0.06; // 0..1 が大きいほど強追尾
-			self.setSpeed(self.getSpeed().lerp(desired, kTrackBlend));
+			// 発狂時は追尾を強化
+			const double blend = isEnraged(self) ? 0.12 : 0.06;
+			self.setSpeed(self.getSpeed().lerp(desired, blend));
 		}
 
 		// 突進中: goPos に近づいたら Idle に戻す
@@ -153,7 +155,8 @@ void MaguroAI::tick(Maguro& self, double dt)
 		burstTimer_ += dt;
 
 		// kBurstInterval ごとに 1 発、kBurstCount に達するまで
-		if (burstShotsFired_ < kBurstCount
+		const int burstCount = isEnraged(self) ? 10 : kBurstCount;
+		if (burstShotsFired_ < burstCount
 			&& burstTimer_ >= kBurstInterval * burstShotsFired_)
 		{
 			const Vec2 startPos = self.getPos() + self.getSize() / 2;
@@ -166,8 +169,8 @@ void MaguroAI::tick(Maguro& self, double dt)
 			++burstShotsFired_;
 		}
 
-		if (burstShotsFired_ >= kBurstCount
-			&& burstTimer_ > kBurstInterval * kBurstCount + kBurstStiffness)
+		if (burstShotsFired_ >= burstCount
+			&& burstTimer_ > kBurstInterval * burstCount + kBurstStiffness)
 		{
 			burstTimer_ = 0.0;
 			burstShotsFired_ = 0;
@@ -273,7 +276,20 @@ void MaguroAI::emitSpread(Maguro& self)
 	spawn(15, true);
 	spawn(-15, true);
 	spawn(0, true);
+	// 発狂時は角度を増やしてさらに4発追加
+	if (isEnraged(self))
+	{
+		spawn(30, false);
+		spawn(-30, false);
+		spawn(30, true);
+		spawn(-30, true);
+	}
 	Sound::play(Sound::SE::EnemyShot);
+}
+
+bool MaguroAI::isEnraged(const Maguro& self) const
+{
+	return self.getHp() < Maguro::BOSS_HP / 2;
 }
 
 Vec2 MaguroAI::unitDirection(const Vec2& from, const Vec2& to)

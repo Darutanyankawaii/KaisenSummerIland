@@ -42,6 +42,9 @@ private:
 	void selectRushTarget(Maguro& self);
 	void emitSpread(Maguro& self);
 
+	// HP < 半分で発狂モード (攻撃頻度・弾数増)
+	bool isEnraged(const Maguro& self) const;
+
 	static Vec2 unitDirection(const Vec2& from, const Vec2& to);
 	static Vec2 angledDirection(double angleDeg, bool dir);
 };
