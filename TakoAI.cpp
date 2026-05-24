@@ -33,7 +33,7 @@ void TakoAI::tick(Tako& self, double dt)
 		gasTimer_ = 0.0;
 	}
 
-	// ガス弾の進行 (各弾の dir に従って進行。画面外/ブロック衝突は CheckBulletsAlive 任せ)
+	// ガス弾の進行 (各弾の dir に従って進行)
 	for (auto& bullet : self.bullets())
 	{
 		bullet->addPos(bullet->getDir() * (dt * kGasHorizontalSpeed));
@@ -51,14 +51,12 @@ void TakoAI::tick(Tako& self, double dt)
 			self.setSpeed(kDashSpeed);
 			phase_ = TakoPhase::Dashing;
 			phaseDuration_ = kDashDuration;
-			self.setVisualPhaseRest(false);
 		}
 		else
 		{
 			// 待機へ
 			phase_ = TakoPhase::Resting;
 			phaseDuration_ = kRestDuration;
-			self.setVisualPhaseRest(true);
 		}
 	}
 

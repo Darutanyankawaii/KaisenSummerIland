@@ -2,6 +2,7 @@
 #include "StageRepository.hpp"
 #include "AssetIDs.hpp"
 #include "SoundSystem.hpp"
+#include "SaveManager.hpp"
 
 namespace {
 	constexpr Color kColorA{ 255, 151, 75 };
@@ -15,6 +16,17 @@ StageSelect::StageSelect(const InitData& init) : IScene{ init }
 	Scene::SetBackground(ColorF{ 0.0, 1.0, 1.0 });
 
 	stageIDList_ = StageRepository::instance().sortedIDs();
+
+	// セーブがあれば最初の未クリアステージへカーソルを合わせる
+	const auto& sm = SaveManager::instance();
+	for (size_t i = 0; i < stageIDList_.size(); ++i)
+	{
+		if (not sm.isCleared(stageIDList_[i]))
+		{
+			selectedStage_ = i;
+			break;
+		}
+	}
 }
 
 void StageSelect::update()
@@ -106,11 +118,13 @@ void StageSelect::draw() const
 		}
 	}
 
+	const auto& sm = SaveManager::instance();
 	for (size_t i = 0; i < stageIDList_.size(); ++i)
 	{
 		const int yOffset = 50 * (static_cast<int>(i) - static_cast<int>(selectedStage_));
 		const StageData sd = StageRepository::instance().get(stageIDList_[i]);
-		FontAsset(GameAssets::Font::StageTitle)(sd.name)
+		const String label = sm.isCleared(stageIDList_[i]) ? (sd.name + U" ✓") : sd.name;
+		FontAsset(GameAssets::Font::StageTitle)(label)
 			.drawAt(Scene::Center() + Point(0, yOffset),
 				ColorF(1.0, 1.0, 1.0, (i == selectedStage_) ? 1.0 : 0.5));
 	}

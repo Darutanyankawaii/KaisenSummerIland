@@ -4,10 +4,9 @@
 #include "MapParser.hpp"
 #include "AssetIDs.hpp"
 #include "SoundSystem.hpp"
+#include "SaveManager.hpp"
 
 namespace {
-	constexpr int kBackgroundTileCount = 6;
-
 	// 弾ヒット時の小さな閃光 (撃破ではない被弾)。短時間で消える。
 	struct HitSparkEffect : IEffect
 	{
@@ -68,8 +67,19 @@ Game::Game(const InitData& init) : IScene{ init }
 		// CSV のスポーンセル位置はスプライト top-left を意図しているため、
 		// setSpawnAt で内部の hitbox top-left に変換する。
 		player_->setSpawnAt(loadedStage_.playerStart);
-		camera_.startPos = player_->getSpritePos().movedBy(0, -1 * kBlockSize);
-		camera_ = CustomCamera2D(camera_.startPos);
+
+		// カメラ初期位置をマップ範囲内にクランプしてからスナップ。
+		// クランプしないと、スポーンがマップ左端に近いとき視野が world x<0 へ
+		// はみ出して背景タイル外の領域 (=未描画) が見えてしまう。
+		constexpr double halfSceneWidth = SCENE_WIDTH / 2.0;
+		const Vec2 desired = player_->getSpritePos().movedBy(0, -1 * kBlockSize);
+		const double clampedX = Clamp(desired.x, halfSceneWidth,
+			static_cast<double>(mapSize_.x) - halfSceneWidth);
+		const Vec2 initialCenter{ clampedX, desired.y };
+		camera_ = CustomCamera2D(initialCenter);
+		camera_.startPos = initialCenter;
+		camera_.jumpTo(initialCenter, 1.0);
+		camera_.setTargetCenter(initialCenter);
 	}
 
 	PutBlocks(loadedStage_);
@@ -91,6 +101,12 @@ void Game::update()
 {
 	Cursor::RequestStyle(CursorStyle::Hidden);
 	ClearPrint();
+
+	if (KeyEscape.down())
+	{
+		changeScene(SceneName::Title);
+		return;
+	}
 
 	updatePlayer();
 	updateEnemies();
@@ -206,9 +222,15 @@ void Game::draw() const
 			? GameAssets::Texture::Sky
 			: GameAssets::Texture::Background;
 		const auto bgSize = TextureAsset(bgTex).size();
-		for (int i = -1; i < kBackgroundTileCount - 1; ++i)
+		// マップ全域を覆うようにタイル枚数を動的に決定 (左に 1 枚分、右に 1 枚分の余裕)
+		const int tilesX = static_cast<int>((mapSize_.x + bgSize.x - 1) / bgSize.x) + 2;
+		const int tilesY = static_cast<int>((mapSize_.y + bgSize.y - 1) / bgSize.y) + 1;
+		for (int j = 0; j < tilesY; ++j)
 		{
-			TextureAsset(bgTex).draw(bgSize.x * i, 0);
+			for (int i = -1; i < tilesX - 1; ++i)
+			{
+				TextureAsset(bgTex).draw(bgSize.x * i, bgSize.y * j);
+			}
 		}
 
 		for (const auto& bd : loadedStage_.blocks)
@@ -350,8 +372,17 @@ void Game::checkGoal()
 		{
 			Sound::play(Sound::SE::StageClear);
 			const int currentStageID = getData().currentStageID;
-			getData().currentStageID = StageRepository::instance().get(currentStageID).nextStageID;
-			changeScene(SceneName::Game);
+			SaveManager::instance().recordCleared(currentStageID);
+			const int nextID = StageRepository::instance().get(currentStageID).nextStageID;
+			if (nextID > 0 && StageRepository::instance().contains(nextID))
+			{
+				getData().currentStageID = nextID;
+				changeScene(SceneName::Game);
+			}
+			else
+			{
+				changeScene(SceneName::GameClear);
+			}
 			return;
 		}
 	}
