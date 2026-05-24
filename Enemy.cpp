@@ -174,11 +174,7 @@ void Maguro::update()
 	for (auto& bullet : bullets_)
 	{
 		bullet->addPos(bullet->getDir() * kMaguroBulletSpeed * dt);
-		bullet->decreaseLifeSpan(dt);
 	}
-	bullets_.remove_if([](const std::unique_ptr<Bullet>& b) {
-		return b->getLifeSpan() < 0 || b->isHit();
-		});
 }
 
 void Maguro::draw() const

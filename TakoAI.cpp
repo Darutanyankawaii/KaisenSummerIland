@@ -31,15 +31,11 @@ void TakoAI::tick(Tako& self, double dt)
 		gasTimer_ = 0.0;
 	}
 
-	// ガス弾の進行 / 寿命 (各弾の dir に従って進行)
+	// ガス弾の進行 (各弾の dir に従って進行。画面外/ブロック衝突は CheckBulletsAlive 任せ)
 	for (auto& bullet : self.bullets())
 	{
 		bullet->addPos(bullet->getDir() * (dt * kGasHorizontalSpeed));
-		bullet->decreaseLifeSpan(dt);
 	}
-	self.bullets().remove_if([](const std::unique_ptr<Bullet>& b) {
-		return b->getLifeSpan() < 0 || b->isHit();
-		});
 
 	// 突進パターン (moveX 中で実行)
 	phaseTimer_ += dt;
