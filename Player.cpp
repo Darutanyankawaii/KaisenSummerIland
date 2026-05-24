@@ -6,9 +6,9 @@
 #include "AssetIDs.hpp"
 
 namespace {
-	// pos_ (=hitbox top-left) からスプライト中心へのオフセット。
-	// スプライト中心 = pos_ + SPRITE_DRAW_OFFSET + SPRITE_SIZE/2 = pos_ + (-18+32, -9+32) = (14, 23)
-	constexpr Vec2 kBulletOffset{ 14, 23 };
+	// 発射位置: スプライト中心 (pos_ + (14, 23)) を基準に、向きに応じて手側にずらす
+	constexpr Vec2 kBulletOffsetCenter{ 14, 23 };
+	constexpr double kHandOffsetX = 8.0;
 }
 
 Player::Player()
@@ -217,7 +217,8 @@ void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>
 	const bool isHolding = MouseL.pressed();
 
 	const auto t = camera.createTransformer();
-	const Vec2 startPos = pos_ + kBulletOffset;
+	const Vec2 startPos = pos_ + kBulletOffsetCenter
+		+ Vec2((playerDir_ == -1 ? -kHandOffsetX : kHandOffsetX), 0);
 	const Vec2 cursorWorld = Cursor::Pos();
 
 	bool fired = false;
