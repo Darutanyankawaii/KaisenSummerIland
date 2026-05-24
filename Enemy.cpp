@@ -91,12 +91,32 @@ Kani::Kani(const Vec2& pos)
 void Kani::update()
 {
 	animation_.update();
+	if (wallEscapeTimer_ > 0.0)
+	{
+		wallEscapeTimer_ -= Scene::DeltaTime();
+	}
 }
 
 void Kani::moveX()
 {
-	dir_ = playerDir_ > 0;
+	// 壁衝突直後 (wallEscapeTimer_ 中) は反転した dir を維持して壁から離れる
+	if (wallEscapeTimer_ <= 0.0)
+	{
+		dir_ = playerDir_ > 0;
+	}
 	Enemy::moveX();
+}
+
+void Kani::onRightWallHit()
+{
+	setFacingRight(false);
+	wallEscapeTimer_ = 0.6;
+}
+
+void Kani::onLeftWallHit()
+{
+	setFacingRight(true);
+	wallEscapeTimer_ = 0.6;
 }
 
 void Kani::draw() const

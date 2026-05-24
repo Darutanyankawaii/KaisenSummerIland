@@ -62,6 +62,11 @@ public:
 	bool isFacingRight() const { return dir_; }
 	void setFacingRight(bool right) { dir_ = right; }
 
+	// 壁衝突通知。デフォルトは向き反転のみ。
+	// 派生クラスで cooldown 等の追加処理を入れる場合に override する。
+	virtual void onRightWallHit() { setFacingRight(false); }
+	virtual void onLeftWallHit()  { setFacingRight(true); }
+
 	float getGravity() const { return gravity_; }
 	void setGravity(float g) { gravity_ = g; }
 
@@ -133,8 +138,12 @@ public:
 	void moveX() override;
 	void draw() const override;
 
+	void onRightWallHit() override;
+	void onLeftWallHit() override;
+
 private:
 	Animation animation_;
+	double wallEscapeTimer_ = 0.0;
 };
 
 class Tako : public Enemy
