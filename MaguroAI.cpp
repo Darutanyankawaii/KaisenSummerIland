@@ -1,6 +1,7 @@
 #include "MaguroAI.hpp"
 #include "Enemy.hpp"
 #include "Bullet.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	constexpr double kIdleInterval = 0.5;        // 攻撃選択までの間隔
@@ -168,6 +169,7 @@ void MaguroAI::emitSpread(Maguro& self)
 	spawn(15, true);
 	spawn(-15, true);
 	spawn(0, true);
+	Sound::play(Sound::SE::EnemyShot);
 }
 
 Vec2 MaguroAI::unitDirection(const Vec2& from, const Vec2& to)

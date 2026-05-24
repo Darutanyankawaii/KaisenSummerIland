@@ -107,6 +107,7 @@ void Player::updateY()
 	{
 		accel_.y -= kJumpImpulse;
 		state_ = State::Jump;
+		Sound::play(Sound::SE::Jump);
 	}
 
 	speed_.y += accel_.y;
@@ -162,6 +163,7 @@ void Player::applyHitFrom(const Vec2& sourcePos)
 	isKnockback_ = true;
 	isInvincible_ = true;
 	knockBackDir_ = (pos_.x < sourcePos.x) ? -1 : 1;
+	Sound::play(Sound::SE::PlayerHit);
 }
 
 void Player::knockBackToEnemy(const Array<std::unique_ptr<Enemy>>& enemies)

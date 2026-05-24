@@ -1,6 +1,7 @@
 #include "TakoAI.hpp"
 #include "Enemy.hpp"
 #include "Bullet.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	constexpr double kGasInterval = 5.0;
@@ -28,6 +29,7 @@ void TakoAI::tick(Tako& self, double dt)
 		self.bullets().push_back(
 			Bullet::createAimed(self.getPos(),
 				self.getPlayerPos(), kGasParams));
+		Sound::play(Sound::SE::EnemyShot);
 		gasTimer_ = 0.0;
 	}
 

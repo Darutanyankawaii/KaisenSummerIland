@@ -1,6 +1,7 @@
 #include "Game.hpp"
 #include "Item.hpp"
 #include "AssetIDs.hpp"
+#include "SoundSystem.hpp"
 
 void Game::PutItem(const LoadedStage& stage)
 {
@@ -39,6 +40,7 @@ void Game::checkItem()
 		if (player_->getRectF().intersects((*it)->get_rect()))
 		{
 			(*it)->get_item(player_);
+			Sound::play(Sound::SE::ItemPickup);
 			it = items_.erase(it);
 		}
 		else

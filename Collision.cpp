@@ -4,6 +4,7 @@
 #include "Block.hpp"
 #include "Enemy.hpp"
 #include "Camera.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	constexpr double kCollisionEpsilon = FLT_EPSILON;
@@ -200,7 +201,15 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 
 				if ((*enemy)->getHp() < 1)
 				{
-					if ((*enemy)->isBoss()) bossKilled = true;
+					if ((*enemy)->isBoss())
+					{
+						bossKilled = true;
+						Sound::play(Sound::SE::BossDefeat);
+					}
+					else
+					{
+						Sound::play(Sound::SE::EnemyDefeat);
+					}
 					enemyDead = true;
 				}
 				break;
