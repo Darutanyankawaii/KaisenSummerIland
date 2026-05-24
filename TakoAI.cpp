@@ -13,7 +13,7 @@ namespace {
 	constexpr BulletParams kGasParams{
 		.bulletSpeed = 1.0,
 		.fallSpeed = 1.0,
-		.size = 30,
+		.size = 16,
 		.lifeSpan = 3.0,
 	};
 	constexpr double kGasHorizontalSpeed = 100.0;
