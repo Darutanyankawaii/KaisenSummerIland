@@ -81,7 +81,11 @@ Kani::Kani(const Vec2& pos)
 	animation_ = loadAnimation(U"crab/crab");
 	animation_.start();
 	this->accel_.y += this->gravity_;
-	this->SIZE_ = Vec2(80, 80);
+	// crab スプライトは 48x48 だが実体は y=31..47, x=2..43 (足元のみ)
+	this->SIZE_ = Vec2(42, 17);
+	this->spriteDrawOffset_ = Vec2(-2, -31);
+	// CSV のスポーン位置 (sprite top-left 意図) を hitbox top-left に再変換
+	this->pos_ = pos - this->spriteDrawOffset_;
 }
 
 void Kani::update()
@@ -97,7 +101,7 @@ void Kani::moveX()
 
 void Kani::draw() const
 {
-	animation_.currentTexture().draw(pos_);
+	animation_.currentTexture().draw(getSpriteDrawPos());
 #ifdef DEBUGGING
 	RectF(pos_, SIZE_).drawFrame(1.0, Palette::Green);
 #endif
@@ -109,6 +113,10 @@ Tako::Tako(const Vec2& pos)
 	: Enemy(pos)
 	, ai_(std::make_unique<TakoAI>())
 {
+	// octopus スプライト 48x48 のうち実体は y=0..46, x=11..36 (縦長で細い)
+	SIZE_ = Vec2(26, 47);
+	spriteDrawOffset_ = Vec2(-11, 0);
+	pos_ = pos - spriteDrawOffset_;
 }
 
 Tako::~Tako() = default;
@@ -130,10 +138,11 @@ void Tako::draw() const
 	{
 		TextureAsset(GameAssets::Texture::Bullet).drawAt(bullet->getPos());
 	}
+	const Vec2 drawAt = getSpriteDrawPos();
 	if (!restingPhase_)
-		TextureAsset(GameAssets::Texture::Octopus1).draw(pos_);
+		TextureAsset(GameAssets::Texture::Octopus1).draw(drawAt);
 	else
-		TextureAsset(GameAssets::Texture::Octopus2).draw(pos_);
+		TextureAsset(GameAssets::Texture::Octopus2).draw(drawAt);
 }
 
 // ===== Maguro =====
@@ -143,6 +152,11 @@ Maguro::Maguro(const Vec2& pos)
 	, ai_(std::make_unique<MaguroAI>())
 {
 	hp_ = BOSS_HP;
+
+	// boss スプライト 80x80 のうち実体は y=1..79, x=6..72 (余白 1~7 px)
+	SIZE_ = Vec2(67, 79);
+	spriteDrawOffset_ = Vec2(-6, -1);
+	pos_ = pos - spriteDrawOffset_;
 
 	for (int i = 0; i < IMAGE_NUM; ++i)
 	{
@@ -165,20 +179,21 @@ void Maguro::update()
 void Maguro::draw() const
 {
 	const bool useAct = animeFlag_;
+	const Vec2 drawAt = getSpriteDrawPos();
 
 	if (this->dir_)
 	{
 		if (!useAct)
-			TextureAsset(GameAssets::Texture::Maguro1).draw(pos_);
+			TextureAsset(GameAssets::Texture::Maguro1).draw(drawAt);
 		else
-			animations_[animeDir_].currentTexture().draw(pos_);
+			animations_[animeDir_].currentTexture().draw(drawAt);
 	}
 	else
 	{
 		if (!useAct)
-			TextureAsset(GameAssets::Texture::Maguro2).draw(pos_);
+			TextureAsset(GameAssets::Texture::Maguro2).draw(drawAt);
 		else
-			animations_[animeDir_].currentTexture().draw(pos_);
+			animations_[animeDir_].currentTexture().draw(drawAt);
 	}
 
 	for (const auto& bullet : bullets_)
