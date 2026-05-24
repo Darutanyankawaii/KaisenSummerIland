@@ -7,6 +7,29 @@
 
 namespace {
 	constexpr int kBackgroundTileCount = 6;
+
+	// 敵撃破時の拡散リング+内側フラッシュ。kDuration 秒で消える。
+	struct EnemyDefeatEffect : IEffect
+	{
+		Vec2 pos_;
+		ColorF color_;
+		double maxRadius_;
+		double duration_;
+
+		EnemyDefeatEffect(const Vec2& pos, const ColorF& color, double maxRadius, double duration)
+			: pos_(pos), color_(color), maxRadius_(maxRadius), duration_(duration) {}
+
+		bool update(double t) override
+		{
+			if (t > duration_) return false;
+			const double progress = t / duration_;
+			const double r = maxRadius_ * progress;
+			const double alpha = 1.0 - progress;
+			Circle(pos_, r).drawFrame(3.0, ColorF{ color_, alpha });
+			Circle(pos_, r * 0.5).draw(ColorF{ color_, alpha * 0.4 });
+			return true;
+		}
+	};
 }
 
 Game::Game(const InitData& init) : IScene{ init }
@@ -123,7 +146,14 @@ void Game::updateBullets()
 
 	Collision::CheckBulletsAlive(playerBullets_, blocks_, camera_);
 
-	if (Collision::CollisionWithBullet(playerBullets_, enemies_))
+	if (Collision::CollisionWithBullet(playerBullets_, enemies_,
+		[this](const Vec2& pos, bool isBoss)
+		{
+			const ColorF c = isBoss ? ColorF{ 1.0, 0.4, 0.4 } : ColorF{ 1.0, 0.9, 0.4 };
+			const double r = isBoss ? 130.0 : 60.0;
+			const double d = isBoss ? 0.7 : 0.35;
+			effects_.add<EnemyDefeatEffect>(pos, c, r, d);
+		}))
 	{
 		changeScene(SceneName::GameClear);
 	}
@@ -174,6 +204,8 @@ void Game::draw() const
 
 		drawItem();
 		player_->draw();
+
+		effects_.update();
 
 		TextureAsset(GameAssets::Texture::LockOn).resized(30).drawAt(Cursor::Pos());
 	}

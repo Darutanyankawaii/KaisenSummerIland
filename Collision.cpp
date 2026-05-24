@@ -184,7 +184,8 @@ void Collision::CheckBulletsAlive(Array<std::unique_ptr<Bullet>>& bullets,
 // ===== 弾と敵 =====
 
 bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
-	Array<std::unique_ptr<Enemy>>& enemies)
+	Array<std::unique_ptr<Enemy>>& enemies,
+	const OnEnemyDefeat& onDefeat)
 {
 	bool bossKilled = false;
 
@@ -201,7 +202,8 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 
 				if ((*enemy)->getHp() < 1)
 				{
-					if ((*enemy)->isBoss())
+					const bool isBoss = (*enemy)->isBoss();
+					if (isBoss)
 					{
 						bossKilled = true;
 						Sound::play(Sound::SE::BossDefeat);
@@ -209,6 +211,10 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 					else
 					{
 						Sound::play(Sound::SE::EnemyDefeat);
+					}
+					if (onDefeat)
+					{
+						onDefeat((*enemy)->getRectF().center(), isBoss);
 					}
 					enemyDead = true;
 				}
