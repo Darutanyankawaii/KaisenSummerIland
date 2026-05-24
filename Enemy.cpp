@@ -169,10 +169,11 @@ Maguro::~Maguro() = default;
 
 void Maguro::update()
 {
-	// 弾の移動
+	constexpr double kMaguroBulletSpeed = 300.0; // units/sec
+	const double dt = Scene::DeltaTime();
 	for (auto& bullet : bullets_)
 	{
-		bullet->addPos(bullet->getDir() * 5);
+		bullet->addPos(bullet->getDir() * kMaguroBulletSpeed * dt);
 	}
 }
 
