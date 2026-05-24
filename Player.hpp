@@ -72,6 +72,8 @@ private:
 	void initAnimations();
 	void playSound();
 	void attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>& playerBullets_);
+	// 接触/被弾時の共通ダメージ適用 (無敵時間中は無効)
+	void applyHitFrom(const Vec2& sourcePos);
 
 public:
 	// テクスチャサイズ (描画用)

@@ -153,23 +153,7 @@ void Player::receiveDamage(int damage)
 	hp_ -= damage;
 }
 
-void Player::knockBackToEnemy(const Array<std::unique_ptr<Enemy>>& enemies)
-{
-	for (const auto& enemy : enemies)
-	{
-		if (!isInvincible_ && this->getRectF().intersects(enemy->getRectF()))
-		{
-			collisionalTimer_.restart();
-			invincibleTimer_.restart();
-			receiveDamage(1);
-			isKnockback_ = true;
-			isInvincible_ = true;
-			knockBackDir_ = (pos_.x < enemy->getPosX()) ? -1 : 1;
-		}
-	}
-}
-
-void Player::onBulletHit(const Vec2& bulletPos)
+void Player::applyHitFrom(const Vec2& sourcePos)
 {
 	if (isInvincible_) return;
 	hp_ -= 1;
@@ -177,7 +161,23 @@ void Player::onBulletHit(const Vec2& bulletPos)
 	invincibleTimer_.restart();
 	isKnockback_ = true;
 	isInvincible_ = true;
-	knockBackDir_ = (pos_.x < bulletPos.x) ? -1 : 1;
+	knockBackDir_ = (pos_.x < sourcePos.x) ? -1 : 1;
+}
+
+void Player::knockBackToEnemy(const Array<std::unique_ptr<Enemy>>& enemies)
+{
+	for (const auto& enemy : enemies)
+	{
+		if (this->getRectF().intersects(enemy->getRectF()))
+		{
+			applyHitFrom(enemy->getPos());
+		}
+	}
+}
+
+void Player::onBulletHit(const Vec2& bulletPos)
+{
+	applyHitFrom(bulletPos);
 }
 
 void Player::recoverDamage(int damage)
