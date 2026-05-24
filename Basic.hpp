@@ -17,11 +17,18 @@ enum class SceneName {
 	GameClear
 };
 
+enum class BgKind
+{
+	Sea, // background.png (デフォルト、海と砂浜)
+	Sky, // sky.png (空と雲)
+};
+
 struct StageData
 {
 	String path;
 	String name;
 	int nextStageID = 0;
+	BgKind bg = BgKind::Sea;
 };
 
 struct GameData

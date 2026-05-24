@@ -91,8 +91,8 @@ void Collision::CollisionWithWall(const Array<Block>& blocks, Array<std::unique_
 		{
 			if (!enemy->hasTerrainCollision()) continue;
 			resolveWallTouch(block.getRegion(), *enemy,
-				[&] { enemy->setFacingRight(false); },
-				[&] { enemy->setFacingRight(true); });
+				[&] { enemy->onRightWallHit(); },
+				[&] { enemy->onLeftWallHit(); });
 		}
 	}
 }

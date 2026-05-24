@@ -140,10 +140,14 @@ void Game::draw() const
 	{
 		const auto t = camera_.createTransformer();
 
-		const auto bgSize = TextureAsset(GameAssets::Texture::Background).size();
+		const BgKind bg = StageRepository::instance().get(getData().currentStageID).bg;
+		const StringView bgTex = (bg == BgKind::Sky)
+			? GameAssets::Texture::Sky
+			: GameAssets::Texture::Background;
+		const auto bgSize = TextureAsset(bgTex).size();
 		for (int i = -1; i < kBackgroundTileCount - 1; ++i)
 		{
-			TextureAsset(GameAssets::Texture::Background).draw(bgSize.x * i, 0);
+			TextureAsset(bgTex).draw(bgSize.x * i, 0);
 		}
 
 		for (const auto& bd : loadedStage_.blocks)
@@ -220,9 +224,11 @@ void Game::PutEnemy(const LoadedStage& stage)
 	{
 		switch (ed.num)
 		{
-		case 1: enemies_.push_back(std::make_unique<Curage>(ed.region)); break;
-		case 2: enemies_.push_back(std::make_unique<Kani>(ed.region));   break;
-		case 3: enemies_.push_back(std::make_unique<Tako>(ed.region));   break;
+		case 1: enemies_.push_back(std::make_unique<Curage>(ed.region));   break;
+		case 2: enemies_.push_back(std::make_unique<Kani>(ed.region));     break;
+		case 3: enemies_.push_back(std::make_unique<Tako>(ed.region));     break;
+		case 4: enemies_.push_back(std::make_unique<AppleMan>(ed.region)); break;
+		case 5: enemies_.push_back(std::make_unique<Fish>(ed.region));     break;
 		case 9:
 			enemies_.push_back(std::make_unique<Maguro>(ed.region));
 			Sound::play(Sound::SE::BossSpawn);

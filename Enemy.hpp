@@ -62,6 +62,11 @@ public:
 	bool isFacingRight() const { return dir_; }
 	void setFacingRight(bool right) { dir_ = right; }
 
+	// 壁衝突通知。デフォルトは向き反転のみ。
+	// 派生クラスで cooldown 等の追加処理を入れる場合に override する。
+	virtual void onRightWallHit() { setFacingRight(false); }
+	virtual void onLeftWallHit()  { setFacingRight(true); }
+
 	float getGravity() const { return gravity_; }
 	void setGravity(float g) { gravity_ = g; }
 
@@ -133,8 +138,12 @@ public:
 	void moveX() override;
 	void draw() const override;
 
+	void onRightWallHit() override;
+	void onLeftWallHit() override;
+
 private:
 	Animation animation_;
+	double wallEscapeTimer_ = 0.0;
 };
 
 class Tako : public Enemy
@@ -155,6 +164,33 @@ private:
 	std::unique_ptr<TakoAI> ai_;
 	Vec2 spawnPos_{ 0, 0 }; // 画面外に逃げないよう上昇上限を spawn から計算するため記憶
 	bool restingPhase_ = true; // 旧 flag_ (true=待機, false=突進)
+};
+
+class AppleMan : public Enemy
+{
+public:
+	explicit AppleMan(const Vec2& pos);
+	void update() override;
+	void moveX() override;
+	void draw() const override;
+
+private:
+	double jumpTimer_ = 0.0;
+};
+
+class Fish : public Enemy
+{
+public:
+	explicit Fish(const Vec2& pos);
+	void moveX() override;
+	void moveY() override;
+	void update() override;
+	void draw() const override;
+
+private:
+	double swimTime_ = 0.0;
+	double baseY_ = 0.0;
+	double bubbleTimer_ = 0.0;
 };
 
 class Maguro : public Enemy

@@ -91,12 +91,32 @@ Kani::Kani(const Vec2& pos)
 void Kani::update()
 {
 	animation_.update();
+	if (wallEscapeTimer_ > 0.0)
+	{
+		wallEscapeTimer_ -= Scene::DeltaTime();
+	}
 }
 
 void Kani::moveX()
 {
-	dir_ = playerDir_ > 0;
+	// 壁衝突直後 (wallEscapeTimer_ 中) は反転した dir を維持して壁から離れる
+	if (wallEscapeTimer_ <= 0.0)
+	{
+		dir_ = playerDir_ > 0;
+	}
 	Enemy::moveX();
+}
+
+void Kani::onRightWallHit()
+{
+	setFacingRight(false);
+	wallEscapeTimer_ = 0.6;
+}
+
+void Kani::onLeftWallHit()
+{
+	setFacingRight(true);
+	wallEscapeTimer_ = 0.6;
 }
 
 void Kani::draw() const
@@ -159,6 +179,136 @@ void Tako::draw() const
 		TextureAsset(GameAssets::Texture::Octopus1).draw(drawAt);
 	else
 		TextureAsset(GameAssets::Texture::Octopus2).draw(drawAt);
+}
+
+// ===== AppleMan =====
+
+AppleMan::AppleMan(const Vec2& pos)
+	: Enemy(pos)
+{
+	// AppleMan スプライト 64x64 のうち実体は y=5..58, x=4..58
+	SIZE_ = Vec2(55, 54);
+	spriteDrawOffset_ = Vec2(-4, -5);
+	pos_ = pos - spriteDrawOffset_;
+	walkSpeed_ = 4;
+	hp_ = 2;
+	accel_.y += gravity_;
+}
+
+void AppleMan::moveX()
+{
+	// プレイヤーが十分離れている時のみ向きを更新 (同 X でのジッタ防止)
+	constexpr double kFaceDeadzone = 24.0;
+	const double dx = playerPos_.x - pos_.x;
+	if (std::abs(dx) > kFaceDeadzone)
+	{
+		dir_ = (dx > 0);
+	}
+	// 接地中だけ歩く (空中は慣性維持で長く跳ぶ)
+	if (speed_.y == 0.0)
+	{
+		speed_.x = dir_ ? walkSpeed_ : -walkSpeed_;
+	}
+	pos_.x += speed_.x;
+}
+
+void AppleMan::update()
+{
+	// 接地中のみタイマーを進めて、間隔ごとに小ジャンプ
+	constexpr double kJumpInterval = 0.9;
+	constexpr double kJumpSpeed = -3.6;
+	if (speed_.y == 0.0)
+	{
+		jumpTimer_ += Scene::DeltaTime();
+		if (jumpTimer_ >= kJumpInterval)
+		{
+			speed_.y = kJumpSpeed;
+			jumpTimer_ = 0.0;
+		}
+	}
+}
+
+void AppleMan::draw() const
+{
+	TextureAsset(GameAssets::Texture::AppleMan).draw(getSpriteDrawPos());
+}
+
+// ===== Fish =====
+
+Fish::Fish(const Vec2& pos)
+	: Enemy(pos)
+{
+	// fish スプライト 80x80 のうち実体は y=20..59, x=10..68
+	SIZE_ = Vec2(59, 40);
+	spriteDrawOffset_ = Vec2(-10, -20);
+	pos_ = pos - spriteDrawOffset_;
+	walkSpeed_ = 2;
+	hp_ = 1;
+	gravity_ = 0.0f;
+	accel_.y = 0.0f;
+	baseY_ = pos_.y;
+}
+
+void Fish::moveX()
+{
+	speed_.x = dir_ ? walkSpeed_ : -walkSpeed_;
+	pos_.x += speed_.x;
+}
+
+void Fish::moveY()
+{
+	swimTime_ += Scene::DeltaTime();
+	constexpr double kAmplitude = 20.0;
+	constexpr double kFreq = 1.2;
+	pos_.y = baseY_ + std::sin(swimTime_ * kFreq) * kAmplitude;
+}
+
+void Fish::update()
+{
+	const double dt = Scene::DeltaTime();
+
+	// 一定間隔で真下方向にバブルを射出
+	constexpr double kBubbleInterval = 1.5;
+	constexpr BulletParams kBubbleParams{
+		.bulletSpeed = 1.0,
+		.fallSpeed = 1.0,
+		.size = 10,
+		.lifeSpan = 4.0,
+	};
+	bubbleTimer_ += dt;
+	if (bubbleTimer_ >= kBubbleInterval)
+	{
+		bullets_.push_back(std::make_unique<Bullet>(
+			getRectF().center(), Vec2{ 0.0, 1.0 }, kBubbleParams));
+		bubbleTimer_ = 0.0;
+	}
+
+	// バブル進行 (重力に近い感覚で下方向)
+	constexpr double kBubbleFallSpeed = 90.0; // px/sec
+	for (auto& b : bullets_)
+	{
+		b->addPos(Vec2{ 0.0, dt * kBubbleFallSpeed });
+	}
+}
+
+void Fish::draw() const
+{
+	const Vec2 at = getSpriteDrawPos();
+	const Texture tex = TextureAsset(GameAssets::Texture::Fish);
+	if (dir_)
+	{
+		tex.mirrored().draw(at);
+	}
+	else
+	{
+		tex.draw(at);
+	}
+
+	// バブル描画
+	for (const auto& b : bullets_)
+	{
+		TextureAsset(GameAssets::Texture::Bullet).drawAt(b->getPos(), Palette::Skyblue);
+	}
 }
 
 // ===== Maguro =====
