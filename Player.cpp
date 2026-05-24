@@ -6,7 +6,9 @@
 #include "AssetIDs.hpp"
 
 namespace {
-	constexpr Vec2 kBulletOffset{ 32, 32 };
+	// pos_ (=hitbox top-left) からスプライト中心へのオフセット。
+	// スプライト中心 = pos_ + SPRITE_DRAW_OFFSET + SPRITE_SIZE/2 = pos_ + (-18+32, -9+32) = (14, 23)
+	constexpr Vec2 kBulletOffset{ 14, 23 };
 }
 
 Player::Player()
@@ -130,14 +132,17 @@ void Player::draw() const
 	const Texture tex = animations_.currentTexture();
 	if (!tex) return;
 
+	// pos_ は hitbox top-left なので、スプライトは SPRITE_DRAW_OFFSET だけ寄せて描画
+	const Vec2 drawAt = pos_ + SPRITE_DRAW_OFFSET;
+
 	if (state_ == State::Aiming)
 	{
-		tex.draw(pos_);
+		tex.draw(drawAt);
 	}
 	else
 	{
-		if (playerDir_ == 1) tex.draw(pos_);
-		else if (playerDir_ == -1) tex.mirrored().draw(pos_);
+		if (playerDir_ == 1) tex.draw(drawAt);
+		else if (playerDir_ == -1) tex.mirrored().draw(drawAt);
 	}
 }
 

@@ -19,8 +19,10 @@ Game::Game(const InitData& init) : IScene{ init }
 	mapSize_ = loadedStage_.mapSize;
 	if (loadedStage_.playerStartSet)
 	{
-		player_->setPos(loadedStage_.playerStart);
-		camera_.startPos = player_->getPos().movedBy(0, -1 * kBlockSize);
+		// CSV のスポーンセル位置はスプライト top-left を意図しているため、
+		// setSpawnAt で内部の hitbox top-left に変換する。
+		player_->setSpawnAt(loadedStage_.playerStart);
+		camera_.startPos = player_->getSpritePos().movedBy(0, -1 * kBlockSize);
 		camera_ = CustomCamera2D(camera_.startPos);
 	}
 
