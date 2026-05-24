@@ -1,12 +1,14 @@
 #include "MaguroAI.hpp"
 #include "Enemy.hpp"
 #include "Bullet.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	constexpr double kIdleInterval = 0.5;        // 攻撃選択までの間隔
 	constexpr double kChargeDuration = 1.0;      // 突進前モーション時間
 	constexpr double kSpreadDuration = 1.0;      // 拡散弾後の硬直時間 (SPAWN_DIFFUSION)
-	constexpr double kRushSpeed = 12.0;
+	constexpr double kRushTimeout = 2.5;         // 突進の最大持続時間 (壁スタックの保険)
+	constexpr double kRushSpeed = 720.0; // units/sec (60fps 換算で 12/frame 相当)
 	constexpr double kGoalCheckRadius = 10.0;
 	constexpr double kSelfCheckRadius = 5.0;
 	constexpr BulletParams kSpreadBulletParams{};
@@ -48,15 +50,19 @@ void MaguroAI::tick(Maguro& self, double dt)
 	}
 	case MaguroPhase::Rushing:
 	{
+		rushTimer_ += dt;
+
 		// 突進中: goPos に近づいたら Idle に戻す
 		const Vec2 center = self.getPos() + self.getSize() / 2;
 		const Vec2 targetCenter = rushTarget_ + self.getSize() / 2;
-		if (Circle{ targetCenter, kGoalCheckRadius }.intersects(
-			Circle{ center, kSelfCheckRadius }))
+		const bool reachedTarget = Circle{ targetCenter, kGoalCheckRadius }
+			.intersects(Circle{ center, kSelfCheckRadius });
+		const bool timedOut = rushTimer_ > kRushTimeout;
+
+		if (reachedTarget || timedOut)
 		{
-			// 着地補正
-			self.setPosY(self.getPosY() - 5.0);
-			self.setHitbox(true);
+			if (reachedTarget) self.setPosY(self.getPosY() - 5.0); // 着地補正
+			self.setTerrainCollision(true);
 			self.setGravity(0.1f);
 			self.setSpeed({ 0, 0 });
 			auto& anims = self.animations();
@@ -83,8 +89,11 @@ void MaguroAI::tick(Maguro& self, double dt)
 
 	// 向きを毎フレーム更新
 	self.setFacingRight(self.getPlayerPos().x < self.getPosX());
-	// 突進中以外は X 移動なし (speed.x は突進中のみセット済み)
-	self.setPosX(self.getPosX() + self.getSpeedX());
+	// 突進中のみ X が動く。speed_.x は units/sec なので dt を掛ける。
+	if (phase_ == MaguroPhase::Rushing)
+	{
+		self.setPosX(self.getPosX() + self.getSpeedX() * dt);
+	}
 }
 
 void MaguroAI::enterIdle(Maguro& /*self*/)
@@ -107,9 +116,10 @@ void MaguroAI::enterRushing(Maguro& self)
 {
 	phase_ = MaguroPhase::Rushing;
 	chargeTimer_ = 0.0;
+	rushTimer_ = 0.0;
 	const Vec2 dir = unitDirection(self.getPos(), rushTarget_);
 	self.setSpeed(dir * kRushSpeed);
-	self.setHitbox(false);
+	self.setTerrainCollision(false);
 	self.setAnimeFlag(false);
 }
 
@@ -159,6 +169,7 @@ void MaguroAI::emitSpread(Maguro& self)
 	spawn(15, true);
 	spawn(-15, true);
 	spawn(0, true);
+	Sound::play(Sound::SE::EnemyShot);
 }
 
 Vec2 MaguroAI::unitDirection(const Vec2& from, const Vec2& to)

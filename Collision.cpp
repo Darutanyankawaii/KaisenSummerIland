@@ -4,6 +4,7 @@
 #include "Block.hpp"
 #include "Enemy.hpp"
 #include "Camera.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	constexpr double kCollisionEpsilon = FLT_EPSILON;
@@ -88,7 +89,7 @@ void Collision::CollisionWithWall(const Array<Block>& blocks, Array<std::unique_
 		if (block.getFlag() != 1) continue;
 		for (auto& enemy : enemies)
 		{
-			if (!enemy->hasHitbox()) continue;
+			if (!enemy->hasTerrainCollision()) continue;
 			resolveWallTouch(block.getRegion(), *enemy,
 				[&] { enemy->setFacingRight(false); },
 				[&] { enemy->setFacingRight(true); });
@@ -130,7 +131,7 @@ void Collision::CollisionWithGround(const Array<Block>& blocks, Array<std::uniqu
 	{
 		for (auto& enemy : enemies)
 		{
-			if (!enemy->hasHitbox()) continue;
+			if (!enemy->hasTerrainCollision()) continue;
 
 			if (block.getFlag() == 1)
 			{
@@ -169,10 +170,11 @@ void Collision::CheckBulletsAlive(Array<std::unique_ptr<Bullet>>& bullets,
 		return !area.contains(b->getCircle());
 		});
 
-	// ブロックと衝突した弾を削除
+	// ブロックと衝突した弾を削除 (薄いブロック (足場) や装飾ブロックは貫通させる)
 	bullets.remove_if([&](const std::unique_ptr<Bullet>& b) {
 		for (const auto& block : blocks)
 		{
+			if (block.getFlag() != 1) continue;
 			if (block.getRegion().intersects(b->getCircle())) return true;
 		}
 		return false;
@@ -199,7 +201,15 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 
 				if ((*enemy)->getHp() < 1)
 				{
-					if ((*enemy)->isBoss()) bossKilled = true;
+					if ((*enemy)->isBoss())
+					{
+						bossKilled = true;
+						Sound::play(Sound::SE::BossDefeat);
+					}
+					else
+					{
+						Sound::play(Sound::SE::EnemyDefeat);
+					}
 					enemyDead = true;
 				}
 				break;
@@ -233,8 +243,9 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 	{
 		if (player->getRectF().intersects((*bt)->getCircle()))
 		{
+			const Vec2 bulletPos = (*bt)->getPos();
 			bt = bullets.erase(bt);
-			player->receiveDamage(1);
+			player->onBulletHit(bulletPos);
 			return true;
 		}
 		++bt;
@@ -242,13 +253,3 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 	return false;
 }
 
-void Collision::CollisionWithBullet(std::unique_ptr<Bullet>& bullet,
-	std::unique_ptr<Player>& player)
-{
-	if (!bullet || bullet->isHit()) return;
-	if (player->getRectF().intersects(bullet->getCircle()))
-	{
-		player->receiveDamage(1);
-		bullet->markHit();
-	}
-}

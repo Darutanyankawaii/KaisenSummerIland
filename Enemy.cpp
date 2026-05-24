@@ -117,6 +117,7 @@ Tako::Tako(const Vec2& pos)
 	SIZE_ = Vec2(26, 47);
 	spriteDrawOffset_ = Vec2(-11, 0);
 	pos_ = pos - spriteDrawOffset_;
+	spawnPos_ = pos_;
 }
 
 Tako::~Tako() = default;
@@ -125,6 +126,21 @@ void Tako::update()
 {
 	// AI 駆動: 移動・ガス弾管理を全部 AI に任せる
 	ai_->tick(*this, Scene::DeltaTime());
+
+	// 浮遊して画面外まで上昇しないよう、spawn から一定範囲に制限
+	constexpr double kMaxRise = 80.0;
+	const double upperBound = spawnPos_.y - kMaxRise;
+	if (pos_.y < upperBound)
+	{
+		pos_.y = upperBound;
+		if (speed_.y < 0) speed_.y = 0;
+	}
+
+	// 地面に張り付かないよう、spawn 以下に落ちて静止/落下中なら強制的に上昇
+	if (pos_.y >= spawnPos_.y && speed_.y >= 0)
+	{
+		speed_.y = -2.0;
+	}
 }
 
 void Tako::moveX()
@@ -136,7 +152,7 @@ void Tako::draw() const
 {
 	for (const auto& bullet : bullets_)
 	{
-		TextureAsset(GameAssets::Texture::Bullet).drawAt(bullet->getPos());
+		TextureAsset(GameAssets::Texture::Bullet).drawAt(bullet->getPos(), Palette::Red);
 	}
 	const Vec2 drawAt = getSpriteDrawPos();
 	if (!restingPhase_)
@@ -169,10 +185,11 @@ Maguro::~Maguro() = default;
 
 void Maguro::update()
 {
-	// 弾の移動
+	constexpr double kMaguroBulletSpeed = 300.0; // units/sec
+	const double dt = Scene::DeltaTime();
 	for (auto& bullet : bullets_)
 	{
-		bullet->addPos(bullet->getDir() * 5);
+		bullet->addPos(bullet->getDir() * kMaguroBulletSpeed * dt);
 	}
 }
 
@@ -198,7 +215,7 @@ void Maguro::draw() const
 
 	for (const auto& bullet : bullets_)
 	{
-		TextureAsset(GameAssets::Texture::Bullet2).drawAt(bullet->getPos());
+		TextureAsset(GameAssets::Texture::Bullet2).drawAt(bullet->getPos(), Palette::Red);
 	}
 }
 
@@ -211,5 +228,13 @@ void Maguro::moveY()
 {
 	this->accel_.y = this->gravity_;
 	this->speed_.y += this->accel_.y;
-	this->pos_.y += this->speed_.y;
+	// 突進中は speed_.y が units/sec のため dt を適用 (それ以外は per-frame の従来挙動)
+	if (ai_->getPhase() == MaguroPhase::Rushing)
+	{
+		this->pos_.y += this->speed_.y * Scene::DeltaTime();
+	}
+	else
+	{
+		this->pos_.y += this->speed_.y;
+	}
 }

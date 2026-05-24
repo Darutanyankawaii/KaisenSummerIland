@@ -21,6 +21,8 @@ public:
 	void recoverDamage(int damage);
 	void receiveDamage(int damage);
 	void knockBackToEnemy(const Array<std::unique_ptr<Enemy>>& enemies);
+	// 弾被弾時の処理 (無敵時間中は無効)。bulletPos からノックバック方向を決定
+	void onBulletHit(const Vec2& bulletPos);
 
 	int getHp() const { return hp_; }
 	int getDir() const { return playerDir_; }
@@ -70,6 +72,8 @@ private:
 	void initAnimations();
 	void playSound();
 	void attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>& playerBullets_);
+	// 接触/被弾時の共通ダメージ適用 (無敵時間中は無効)
+	void applyHitFrom(const Vec2& sourcePos);
 
 public:
 	// テクスチャサイズ (描画用)
@@ -88,7 +92,7 @@ private:
 
 	static constexpr float kJumpImpulse = 18.0f;
 	static constexpr double kKnockBackSpeed = 5.0;
-	static constexpr double kShotPostDuration = 0.5;
+	static constexpr double kShotPostDuration = 0.3; // 狙うアニメ維持期間の下限 (秒)
 
 	Vec2 pos_{ 0, 0 };
 	Vec2 speed_{ SET_SPEED };
@@ -97,12 +101,12 @@ private:
 	int playerDir_ = 1;
 	Vec2 attackDir_{ 1, 0 };
 	bool isGround_ = false;
+	bool prevIsGround_ = false; // 前フレームの接地状態 (着地 SE 検出用)
 
 	int hp_ = 5;
 	int walkSpeed_ = 5;
 	float gravity_ = 1.0f;
 
-	bool aimFlag_ = false;
 	bool shotNow_ = false;
 	double shotTime_ = 0.0;
 

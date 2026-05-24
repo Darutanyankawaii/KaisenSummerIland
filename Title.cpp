@@ -1,5 +1,6 @@
 #include "Title.hpp"
 #include "AssetIDs.hpp"
+#include "SoundSystem.hpp"
 
 Title::Title(const InitData& init) : IScene{ init }
 {
@@ -10,14 +11,17 @@ void Title::update()
 {
 	if (start.leftClicked())
 	{
+		Sound::play(Sound::SE::MenuConfirm);
 		changeScene(SceneName::StageSelect);
 	}
 	else if (howtoplay.leftClicked())
 	{
+		Sound::play(Sound::SE::MenuConfirm);
 		changeScene(SceneName::How2Play);
 	}
 	else if (quit.leftClicked())
 	{
+		Sound::play(Sound::SE::MenuConfirm);
 		System::Exit();
 	}
 }

@@ -52,8 +52,12 @@ public:
 	int getID() const { return ID_; }
 	bool isBoss() const { return ID_ == -1; }
 
-	bool hasHitbox() const { return hitbox_; }
-	void setHitbox(bool h) { hitbox_ = h; }
+	// 地形 (壁/床) との当たり判定を持つか。
+	// false の時は Collision::CollisionWithWall/Ground で無視される
+	// (突進中ボスのように一時的に地形貫通したいケースで使う)。
+	// プレイヤーとの接触判定 (knockBackToEnemy) はこのフラグの影響を受けない。
+	bool hasTerrainCollision() const { return terrainCollision_; }
+	void setTerrainCollision(bool v) { terrainCollision_ = v; }
 
 	bool isFacingRight() const { return dir_; }
 	void setFacingRight(bool right) { dir_ = right; }
@@ -101,7 +105,7 @@ protected:
 	int hp_ = 1;
 	Array<std::unique_ptr<Bullet>> bullets_;
 	int ID_ = 0;
-	bool hitbox_ = true;
+	bool terrainCollision_ = true;
 	bool loop_ = true;
 
 	int playerDir_ = 0;
@@ -149,6 +153,7 @@ public:
 
 private:
 	std::unique_ptr<TakoAI> ai_;
+	Vec2 spawnPos_{ 0, 0 }; // 画面外に逃げないよう上昇上限を spawn から計算するため記憶
 	bool restingPhase_ = true; // 旧 flag_ (true=待機, false=突進)
 };
 
