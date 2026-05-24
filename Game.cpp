@@ -153,6 +153,7 @@ void Game::updateBullets()
 			const double r = isBoss ? 130.0 : 60.0;
 			const double d = isBoss ? 0.7 : 0.35;
 			effects_.add<EnemyDefeatEffect>(pos, c, r, d);
+			if (isBoss) camera_.triggerShake(14.0, 0.55);
 		}))
 	{
 		changeScene(SceneName::GameClear);
@@ -160,7 +161,10 @@ void Game::updateBullets()
 
 	for (auto& enemy : enemies_)
 	{
-		Collision::CollisionWithBullet(enemy->bullets(), player_);
+		if (Collision::CollisionWithBullet(enemy->bullets(), player_))
+		{
+			camera_.triggerShake(5.0, 0.18);
+		}
 		Collision::CheckBulletsAlive(enemy->bullets(), blocks_, camera_);
 	}
 }
@@ -169,6 +173,7 @@ void Game::draw() const
 {
 	{
 		const auto t = camera_.createTransformer();
+		const Transformer2D shakeTr{ Mat3x2::Translate(camera_.getShakeOffset()), TransformCursor::Yes };
 
 		const BgKind bg = StageRepository::instance().get(getData().currentStageID).bg;
 		const StringView bgTex = (bg == BgKind::Sky)
@@ -218,6 +223,7 @@ void Game::draw() const
 
 void Game::updateCamera()
 {
+	camera_.updateShake(Scene::DeltaTime());
 	camera_.update();
 
 	const double halfSceneWidth = Scene::Width() / 2.0;
