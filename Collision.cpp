@@ -169,10 +169,11 @@ void Collision::CheckBulletsAlive(Array<std::unique_ptr<Bullet>>& bullets,
 		return !area.contains(b->getCircle());
 		});
 
-	// ブロックと衝突した弾を削除
+	// ブロックと衝突した弾を削除 (薄いブロック (足場) や装飾ブロックは貫通させる)
 	bullets.remove_if([&](const std::unique_ptr<Bullet>& b) {
 		for (const auto& block : blocks)
 		{
+			if (block.getFlag() != 1) continue;
 			if (block.getRegion().intersects(b->getCircle())) return true;
 		}
 		return false;
