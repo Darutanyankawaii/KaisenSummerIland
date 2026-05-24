@@ -177,8 +177,13 @@ AppleMan::AppleMan(const Vec2& pos)
 
 void AppleMan::moveX()
 {
-	// プレイヤー方向に向く (常時)
-	dir_ = (playerPos_.x > pos_.x);
+	// プレイヤーが十分離れている時のみ向きを更新 (同 X でのジッタ防止)
+	constexpr double kFaceDeadzone = 24.0;
+	const double dx = playerPos_.x - pos_.x;
+	if (std::abs(dx) > kFaceDeadzone)
+	{
+		dir_ = (dx > 0);
+	}
 	// 接地中だけ歩く (空中は慣性維持で長く跳ぶ)
 	if (speed_.y == 0.0)
 	{
