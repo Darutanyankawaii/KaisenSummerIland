@@ -82,7 +82,7 @@ void Player::updateX()
 
 	if (isKnockback_)
 	{
-		pos_.x += knockBackDir_ * kKnockBackSpeed;
+		pos_.x += knockBackDir_ * kKnockBackSpeed * FpsFactor();
 		if (collisionalTimer_.reachedZero())
 		{
 			isKnockback_ = false;
@@ -90,7 +90,7 @@ void Player::updateX()
 	}
 	else
 	{
-		pos_.x += speed_.x;
+		pos_.x += speed_.x * FpsFactor();
 	}
 
 	if (invincibleTimer_.reachedZero())
@@ -110,8 +110,8 @@ void Player::updateY()
 		Sound::play(Sound::SE::Jump);
 	}
 
-	speed_.y += accel_.y;
-	pos_.y += speed_.y;
+	speed_.y += accel_.y * FpsFactor();
+	pos_.y += speed_.y * FpsFactor();
 
 	if (!isGround_ && state_ != State::Aiming)
 	{

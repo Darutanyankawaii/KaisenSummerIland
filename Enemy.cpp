@@ -43,14 +43,14 @@ void Enemy::update()
 void Enemy::moveX()
 {
 	speed_.x = dir_ ? walkSpeed_ : -walkSpeed_;
-	pos_.x += speed_.x;
+	pos_.x += speed_.x * FpsFactor();
 }
 
 void Enemy::moveY()
 {
 	accel_.y = gravity_;
-	speed_.y += accel_.y;
-	pos_.y += speed_.y;
+	speed_.y += accel_.y * FpsFactor();
+	pos_.y += speed_.y * FpsFactor();
 }
 
 // ===== Curage =====
@@ -209,7 +209,7 @@ void AppleMan::moveX()
 	{
 		speed_.x = dir_ ? walkSpeed_ : -walkSpeed_;
 	}
-	pos_.x += speed_.x;
+	pos_.x += speed_.x * FpsFactor();
 }
 
 void AppleMan::update()
@@ -252,7 +252,7 @@ Fish::Fish(const Vec2& pos)
 void Fish::moveX()
 {
 	speed_.x = dir_ ? walkSpeed_ : -walkSpeed_;
-	pos_.x += speed_.x;
+	pos_.x += speed_.x * FpsFactor();
 }
 
 void Fish::moveY()
@@ -377,14 +377,15 @@ void Maguro::moveX()
 void Maguro::moveY()
 {
 	this->accel_.y = this->gravity_;
-	this->speed_.y += this->accel_.y;
-	// 突進中は speed_.y が units/sec のため dt を適用 (それ以外は per-frame の従来挙動)
+	// 突進中は speed_.y が units/sec のため dt を適用 (それ以外は per-frame ベース)
 	if (ai_->getPhase() == MaguroPhase::Rushing)
 	{
+		this->speed_.y += this->accel_.y;
 		this->pos_.y += this->speed_.y * Scene::DeltaTime();
 	}
 	else
 	{
-		this->pos_.y += this->speed_.y;
+		this->speed_.y += this->accel_.y * FpsFactor();
+		this->pos_.y += this->speed_.y * FpsFactor();
 	}
 }

@@ -8,6 +8,14 @@ inline constexpr int kBlockSize = 48;
 // 旧コード互換 (新規コードは kBlockSize を使うこと)
 inline constexpr int blockSize = kBlockSize;
 
+// FPS 独立化用係数。60fps を基準とし、per-frame 速度の加算箇所に掛けて使う。
+// 例: pos_.x += speed_.x * FpsFactor();
+// 60fps → 1.0、120fps → 0.5、30fps → 2.0
+inline double FpsFactor()
+{
+	return Scene::DeltaTime() * 60.0;
+}
+
 enum class SceneName {
 	Title,
 	StageSelect,
