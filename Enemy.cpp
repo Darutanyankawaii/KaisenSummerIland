@@ -135,6 +135,12 @@ void Tako::update()
 		pos_.y = upperBound;
 		if (speed_.y < 0) speed_.y = 0;
 	}
+
+	// 地面に張り付かないよう、spawn 以下に落ちて静止/落下中なら強制的に上昇
+	if (pos_.y >= spawnPos_.y && speed_.y >= 0)
+	{
+		speed_.y = -2.0;
+	}
 }
 
 void Tako::moveX()
