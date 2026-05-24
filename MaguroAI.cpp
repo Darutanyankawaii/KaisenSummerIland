@@ -52,6 +52,16 @@ void MaguroAI::tick(Maguro& self, double dt)
 	{
 		rushTimer_ += dt;
 
+		// 突進中はプレイヤーをゆるく追尾 (速度方向を毎フレーム lerp で補正)
+		const Vec2 toPlayer = self.getPlayerPos() - self.getPos();
+		const double len = toPlayer.length();
+		if (len > 1e-6)
+		{
+			const Vec2 desired = (toPlayer / len) * kRushSpeed;
+			constexpr double kTrackBlend = 0.06; // 0..1 が大きいほど強追尾
+			self.setSpeed(self.getSpeed().lerp(desired, kTrackBlend));
+		}
+
 		// 突進中: goPos に近づいたら Idle に戻す
 		const Vec2 center = self.getPos() + self.getSize() / 2;
 		const Vec2 targetCenter = rushTarget_ + self.getSize() / 2;
