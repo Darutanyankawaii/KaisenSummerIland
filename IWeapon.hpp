@@ -29,6 +29,9 @@ public:
 
 	// 武器のクールタイム (秒)。Player 側で aiming アニメ維持期間に利用
 	virtual double cooltimeSec() const = 0;
+
+	// クールタイム残量比 (0.0=即発射可、1.0=フルクール残)。HUD 表示用
+	virtual double cooltimeRatio() const = 0;
 };
 
 // クールタイム管理を担う共通基底。
@@ -48,6 +51,11 @@ public:
 
 	int weaponId() const override { return weaponId_; }
 	double cooltimeSec() const override { return cooltimeSpec_; }
+	double cooltimeRatio() const override
+	{
+		if (cooltimeSpec_ <= 0.0) return 0.0;
+		return std::clamp(current_ / cooltimeSpec_, 0.0, 1.0);
+	}
 
 protected:
 	bool canFire() const { return current_ <= 0.0; }

@@ -219,6 +219,26 @@ void Game::draw() const
 	{
 		TextureAsset(GameAssets::Texture::Heart).drawAt(680 - i * 45, 30);
 	}
+
+	// 武器クールタイム表示 (左下に円グラフ風: 残量に応じて扇形が縮む)
+	{
+		constexpr Vec2 center{ 60, 700 };
+		constexpr double radius = 28.0;
+		const double ratio = player_->getWeaponCooltimeRatio();
+		// 背景の薄い円
+		Circle(center, radius).draw(ColorF{ 0.1, 0.1, 0.1, 0.5 }).drawFrame(2.0, ColorF{ 1.0, 0.8 });
+		if (ratio > 0.0)
+		{
+			// 残量を扇形で表示 (12 時方向起点、時計回り)
+			const double angle = ratio * Math::TwoPi;
+			Circle(center, radius - 4).drawPie(0.0, angle, ColorF{ 1.0, 0.6, 0.2, 0.85 });
+		}
+		else
+		{
+			// 発射可: 緑の中央円
+			Circle(center, radius - 8).draw(ColorF{ 0.3, 1.0, 0.4, 0.7 });
+		}
+	}
 }
 
 void Game::updateCamera()
