@@ -93,6 +93,12 @@ void Game::update()
 	Cursor::RequestStyle(CursorStyle::Hidden);
 	ClearPrint();
 
+	if (KeyEscape.down())
+	{
+		changeScene(SceneName::Title);
+		return;
+	}
+
 	updatePlayer();
 	updateEnemies();
 	updateBullets();

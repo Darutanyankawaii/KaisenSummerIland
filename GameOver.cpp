@@ -9,7 +9,7 @@ GameOver::GameOver(const InitData& init) : IScene{ init }
 
 void GameOver::update()
 {
-	if ((KeyEnter | KeyZ | KeySpace | MouseL).down())
+	if ((KeyEnter | KeyZ | KeySpace | KeyEscape | MouseL).down())
 	{
 		Sound::play(Sound::SE::MenuConfirm);
 		changeScene(SceneName::Title);

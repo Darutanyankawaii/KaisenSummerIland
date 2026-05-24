@@ -14,6 +14,9 @@ void Main()
 {
 	Window::Resize(SCENE_WIDTH, SCENE_HEIGHT);
 
+	// Esc キーをタイトル復帰用に使うため、終了トリガーから除外する (× ボタンのみで終了)
+	System::SetTerminationTriggers(UserAction::CloseButtonClicked);
+
 	App manager;
 	manager
 		.add<Title>(SceneName::Title)
