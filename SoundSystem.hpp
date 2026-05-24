@@ -39,6 +39,10 @@ namespace Sound
 	// ループ設定 (主に BGM 用に init 後に呼ぶ)
 	void setLoop(SE se, bool loop);
 
+	// 音量設定 (0.0 ~ 1.0)。playOneShot で再生中の音には反映されないので、
+	// BGM や常時音にのみ有効。
+	void setVolume(SE se, double volume);
+
 	// playOneShot で再生中のインスタンスを全停止 (シーン切替時に有用)
 	void stopAllShots(SE se);
 }

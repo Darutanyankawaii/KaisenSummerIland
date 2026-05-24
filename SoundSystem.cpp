@@ -138,8 +138,9 @@ namespace Sound
 		// ジャンプ: 短い上昇スイープ
 		g_audios[SE::Jump] = Audio(sineSweep(350.0, 600.0, 0.1, 0.2));
 
-		// BGM はデフォルトでループ
+		// BGM はデフォルトでループ + SE が聞き取れるよう音量を抑える
 		setLoop(SE::BGM, true);
+		setVolume(SE::BGM, 0.15);
 	}
 
 	void play(SE se)
@@ -171,6 +172,14 @@ namespace Sound
 		if (auto it = g_audios.find(se); it != g_audios.end())
 		{
 			it->second.setLoop(loop);
+		}
+	}
+
+	void setVolume(SE se, double volume)
+	{
+		if (auto it = g_audios.find(se); it != g_audios.end())
+		{
+			it->second.setVolume(volume);
 		}
 	}
 
