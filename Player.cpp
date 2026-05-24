@@ -146,14 +146,25 @@ void Player::draw() const
 	// pos_ は hitbox top-left なので、スプライトは SPRITE_DRAW_OFFSET だけ寄せて描画
 	const Vec2 drawAt = pos_ + SPRITE_DRAW_OFFSET;
 
+	// 無敵時間中は alpha を点滅させて被弾フィードバックを出す
+	ColorF tint{ 1.0 };
+	if (isInvincible_)
+	{
+		constexpr double kInvincibleDuration = 0.7;
+		const double elapsedSec = kInvincibleDuration - invincibleTimer_.sF();
+		constexpr double kFlashHz = 14.0;
+		const bool dim = static_cast<int>(elapsedSec * kFlashHz) % 2 == 0;
+		tint = ColorF{ 1.0, 1.0, 1.0, dim ? 0.35 : 1.0 };
+	}
+
 	if (state_ == State::Aiming)
 	{
-		tex.draw(drawAt);
+		tex.draw(drawAt, tint);
 	}
 	else
 	{
-		if (playerDir_ == 1) tex.draw(drawAt);
-		else if (playerDir_ == -1) tex.mirrored().draw(drawAt);
+		if (playerDir_ == 1) tex.draw(drawAt, tint);
+		else if (playerDir_ == -1) tex.mirrored().draw(drawAt, tint);
 	}
 }
 
