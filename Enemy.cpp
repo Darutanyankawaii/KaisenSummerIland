@@ -222,5 +222,13 @@ void Maguro::moveY()
 {
 	this->accel_.y = this->gravity_;
 	this->speed_.y += this->accel_.y;
-	this->pos_.y += this->speed_.y;
+	// 突進中は speed_.y が units/sec のため dt を適用 (それ以外は per-frame の従来挙動)
+	if (ai_->getPhase() == MaguroPhase::Rushing)
+	{
+		this->pos_.y += this->speed_.y * Scene::DeltaTime();
+	}
+	else
+	{
+		this->pos_.y += this->speed_.y;
+	}
 }

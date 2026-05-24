@@ -7,7 +7,7 @@ namespace {
 	constexpr double kChargeDuration = 1.0;      // 突進前モーション時間
 	constexpr double kSpreadDuration = 1.0;      // 拡散弾後の硬直時間 (SPAWN_DIFFUSION)
 	constexpr double kRushTimeout = 2.5;         // 突進の最大持続時間 (壁スタックの保険)
-	constexpr double kRushSpeed = 12.0;
+	constexpr double kRushSpeed = 720.0; // units/sec (60fps 換算で 12/frame 相当)
 	constexpr double kGoalCheckRadius = 10.0;
 	constexpr double kSelfCheckRadius = 5.0;
 	constexpr BulletParams kSpreadBulletParams{};
@@ -88,8 +88,11 @@ void MaguroAI::tick(Maguro& self, double dt)
 
 	// 向きを毎フレーム更新
 	self.setFacingRight(self.getPlayerPos().x < self.getPosX());
-	// 突進中以外は X 移動なし (speed.x は突進中のみセット済み)
-	self.setPosX(self.getPosX() + self.getSpeedX());
+	// 突進中のみ X が動く。speed_.x は units/sec なので dt を掛ける。
+	if (phase_ == MaguroPhase::Rushing)
+	{
+		self.setPosX(self.getPosX() + self.getSpeedX() * dt);
+	}
 }
 
 void MaguroAI::enterIdle(Maguro& /*self*/)
