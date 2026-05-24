@@ -225,7 +225,8 @@ void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>
 	}
 	else if (isHolding && inAimingState && weapon_->isContinuous())
 	{
-		// 連射武器: aiming 中の継続クリック
+		// 連射武器: aiming 中の継続クリック (狙いも追従更新)
+		attackDir_ = (Cursor::Pos() - getCenter()).normalize();
 		shotNow_ = true;
 		fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
 	}
