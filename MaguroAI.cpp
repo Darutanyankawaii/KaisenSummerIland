@@ -6,6 +6,7 @@ namespace {
 	constexpr double kIdleInterval = 0.5;        // 攻撃選択までの間隔
 	constexpr double kChargeDuration = 1.0;      // 突進前モーション時間
 	constexpr double kSpreadDuration = 1.0;      // 拡散弾後の硬直時間 (SPAWN_DIFFUSION)
+	constexpr double kRushTimeout = 2.5;         // 突進の最大持続時間 (壁スタックの保険)
 	constexpr double kRushSpeed = 12.0;
 	constexpr double kGoalCheckRadius = 10.0;
 	constexpr double kSelfCheckRadius = 5.0;
@@ -48,14 +49,18 @@ void MaguroAI::tick(Maguro& self, double dt)
 	}
 	case MaguroPhase::Rushing:
 	{
+		rushTimer_ += dt;
+
 		// 突進中: goPos に近づいたら Idle に戻す
 		const Vec2 center = self.getPos() + self.getSize() / 2;
 		const Vec2 targetCenter = rushTarget_ + self.getSize() / 2;
-		if (Circle{ targetCenter, kGoalCheckRadius }.intersects(
-			Circle{ center, kSelfCheckRadius }))
+		const bool reachedTarget = Circle{ targetCenter, kGoalCheckRadius }
+			.intersects(Circle{ center, kSelfCheckRadius });
+		const bool timedOut = rushTimer_ > kRushTimeout;
+
+		if (reachedTarget || timedOut)
 		{
-			// 着地補正
-			self.setPosY(self.getPosY() - 5.0);
+			if (reachedTarget) self.setPosY(self.getPosY() - 5.0); // 着地補正
 			self.setHitbox(true);
 			self.setGravity(0.1f);
 			self.setSpeed({ 0, 0 });
@@ -107,6 +112,7 @@ void MaguroAI::enterRushing(Maguro& self)
 {
 	phase_ = MaguroPhase::Rushing;
 	chargeTimer_ = 0.0;
+	rushTimer_ = 0.0;
 	const Vec2 dir = unitDirection(self.getPos(), rushTarget_);
 	self.setSpeed(dir * kRushSpeed);
 	self.setHitbox(false);

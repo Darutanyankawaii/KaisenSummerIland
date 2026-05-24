@@ -21,6 +21,7 @@ private:
 	MaguroPhase phase_ = MaguroPhase::Idle;
 	double idleTimer_ = 0.0;
 	double chargeTimer_ = 0.0;
+	double rushTimer_ = 0.0;
 	double spreadTimer_ = 0.0;
 	int lastTargetIndex_ = 0;
 	Vec2 rushTarget_{ 0, 0 };
