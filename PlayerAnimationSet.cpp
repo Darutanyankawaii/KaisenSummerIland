@@ -34,8 +34,8 @@ void PlayerAnimationSet::load()
 		fall_ = Animation::loadFromDir(U"image/player/fall", true, true);
 	}
 
-	// Aiming: 旧コードは weapon ∈ {0, 2, 3} × dir ∈ {0..6}
-	for (int w : { 0, 2, 3 })
+	// Aiming: weapon ∈ {0, 1, 2, 3} × dir ∈ {0..6}
+	for (int w : { 0, 1, 2, 3 })
 	{
 		for (int d = 0; d < 7; ++d)
 		{
