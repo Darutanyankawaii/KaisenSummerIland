@@ -140,10 +140,14 @@ void Game::draw() const
 	{
 		const auto t = camera_.createTransformer();
 
-		const auto bgSize = TextureAsset(GameAssets::Texture::Background).size();
+		const BgKind bg = StageRepository::instance().get(getData().currentStageID).bg;
+		const StringView bgTex = (bg == BgKind::Sky)
+			? GameAssets::Texture::Sky
+			: GameAssets::Texture::Background;
+		const auto bgSize = TextureAsset(bgTex).size();
 		for (int i = -1; i < kBackgroundTileCount - 1; ++i)
 		{
-			TextureAsset(GameAssets::Texture::Background).draw(bgSize.x * i, 0);
+			TextureAsset(bgTex).draw(bgSize.x * i, 0);
 		}
 
 		for (const auto& bd : loadedStage_.blocks)
