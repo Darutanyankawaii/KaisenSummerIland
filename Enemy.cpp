@@ -175,6 +175,34 @@ AppleMan::AppleMan(const Vec2& pos)
 	accel_.y += gravity_;
 }
 
+void AppleMan::moveX()
+{
+	// プレイヤー方向に向く (常時)
+	dir_ = (playerPos_.x > pos_.x);
+	// 接地中だけ歩く (空中は慣性維持で長く跳ぶ)
+	if (speed_.y == 0.0)
+	{
+		speed_.x = dir_ ? walkSpeed_ : -walkSpeed_;
+	}
+	pos_.x += speed_.x;
+}
+
+void AppleMan::update()
+{
+	// 接地中のみタイマーを進めて、間隔ごとに小ジャンプ
+	constexpr double kJumpInterval = 0.9;
+	constexpr double kJumpSpeed = -3.6;
+	if (speed_.y == 0.0)
+	{
+		jumpTimer_ += Scene::DeltaTime();
+		if (jumpTimer_ >= kJumpInterval)
+		{
+			speed_.y = kJumpSpeed;
+			jumpTimer_ = 0.0;
+		}
+	}
+}
+
 void AppleMan::draw() const
 {
 	TextureAsset(GameAssets::Texture::AppleMan).draw(getSpriteDrawPos());

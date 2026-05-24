@@ -161,7 +161,12 @@ class AppleMan : public Enemy
 {
 public:
 	explicit AppleMan(const Vec2& pos);
+	void update() override;
+	void moveX() override;
 	void draw() const override;
+
+private:
+	double jumpTimer_ = 0.0;
 };
 
 class Fish : public Enemy
