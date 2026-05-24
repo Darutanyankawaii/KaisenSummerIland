@@ -213,7 +213,6 @@ void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>
 
 	const bool isFirstClick = MouseL.down();
 	const bool isHolding = MouseL.pressed();
-	const bool inAimingState = (state_ == State::Aiming);
 
 	const auto t = camera.createTransformer();
 	const Vec2 startPos = pos_ + kBulletOffset;
@@ -230,11 +229,13 @@ void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>
 		// 単発・連射いずれも同フレームで発射 (連射は次フレーム以降も継続)
 		fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
 	}
-	else if (isHolding && inAimingState && weapon_->isContinuous())
+	else if (isHolding && weapon_->isContinuous())
 	{
-		// 連射武器: aiming 中の継続クリック (狙いも追従更新)
+		// 連射武器: hold 中は state に関係なく発射継続 (狙いも追従更新)
 		attackDir_ = (Cursor::Pos() - getCenter()).normalize();
+		state_ = State::Aiming;
 		shotNow_ = true;
+		shotTime_ = 0.0; // hold 中は aiming タイマーをリセットし続け、状態維持
 		fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
 	}
 
