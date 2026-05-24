@@ -43,6 +43,11 @@ void Bullet::update()
 	{
 		fallSpeed_ -= Scene::DeltaTime() * kFallDecayRate;
 	}
+	// 重力風の下方向加算後、正規化して長さ 1 を維持 (速度が無限に増えるのを防ぐ)
 	dir_ += Vec2{ 0.0, fallSpeed_ / kFallSpeedDivisor };
+	if (const double len = dir_.length(); len > 1e-9)
+	{
+		dir_ /= len;
+	}
 	pos_ += dir_ * bulletSpeed_ * Scene::DeltaTime() * kBlockSize;
 }
