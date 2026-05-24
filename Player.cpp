@@ -220,12 +220,8 @@ void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>
 		attackDir_ = (Cursor::Pos() - getCenter()).normalize();
 		state_ = State::Aiming;
 		shotNow_ = true;
-
-		// 単発武器のみ: 同フレームで発射
-		if (!weapon_->isContinuous())
-		{
-			fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
-		}
+		// 単発・連射いずれも同フレームで発射 (連射は次フレーム以降も継続)
+		fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
 	}
 	else if (isHolding && inAimingState && weapon_->isContinuous())
 	{
