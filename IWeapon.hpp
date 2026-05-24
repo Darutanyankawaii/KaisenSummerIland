@@ -26,6 +26,9 @@ public:
 
 	// 武器識別子 (WeaponName enum 値)。アニメーション切替などに利用。
 	virtual int weaponId() const = 0;
+
+	// 武器のクールタイム (秒)。Player 側で aiming アニメ維持期間に利用
+	virtual double cooltimeSec() const = 0;
 };
 
 // クールタイム管理を担う共通基底。
@@ -44,6 +47,7 @@ public:
 	}
 
 	int weaponId() const override { return weaponId_; }
+	double cooltimeSec() const override { return cooltimeSpec_; }
 
 protected:
 	bool canFire() const { return current_ <= 0.0; }

@@ -90,7 +90,7 @@ private:
 
 	static constexpr float kJumpImpulse = 18.0f;
 	static constexpr double kKnockBackSpeed = 5.0;
-	static constexpr double kShotPostDuration = 0.5;
+	static constexpr double kShotPostDuration = 0.3; // 狙うアニメ維持期間の下限 (秒)
 
 	Vec2 pos_{ 0, 0 };
 	Vec2 speed_{ SET_SPEED };

@@ -38,7 +38,9 @@ void Player::updateX()
 	if (shotNow_)
 	{
 		shotTime_ += Scene::DeltaTime();
-		if (shotTime_ > kShotPostDuration)
+		// 狙うアニメ維持期間は武器のクールタイムに合わせる (最低 kShotPostDuration 0.3s)
+		const double aimHold = weapon_ ? Max(weapon_->cooltimeSec(), kShotPostDuration) : kShotPostDuration;
+		if (shotTime_ > aimHold)
 		{
 			shotTime_ = 0;
 			shotNow_ = false;
