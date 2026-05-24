@@ -7,8 +7,6 @@
 #include "SaveManager.hpp"
 
 namespace {
-	constexpr int kBackgroundTileCount = 6;
-
 	// 弾ヒット時の小さな閃光 (撃破ではない被弾)。短時間で消える。
 	struct HitSparkEffect : IEffect
 	{
@@ -213,14 +211,24 @@ void Game::draw() const
 			? GameAssets::Texture::Sky
 			: GameAssets::Texture::Background;
 		const auto bgSize = TextureAsset(bgTex).size();
-		for (int i = -1; i < kBackgroundTileCount - 1; ++i)
+		// マップ全域を覆うようにタイル枚数を動的に決定 (左に 1 枚分、右に 1 枚分の余裕)
+		const int tilesX = static_cast<int>((mapSize_.x + bgSize.x - 1) / bgSize.x) + 2;
+		const int tilesY = static_cast<int>((mapSize_.y + bgSize.y - 1) / bgSize.y) + 1;
+		for (int j = 0; j < tilesY; ++j)
 		{
-			TextureAsset(bgTex).draw(bgSize.x * i, 0);
+			for (int i = -1; i < tilesX - 1; ++i)
+			{
+				TextureAsset(bgTex).draw(bgSize.x * i, bgSize.y * j);
+			}
 		}
 
-		for (const auto& bd : loadedStage_.blocks)
 		{
-			maps_[bd.num].draw(bd.pos);
+			// タイル境界で隣接ピクセルが滲んで継ぎ目に見えないよう Nearest サンプリング固定
+			const ScopedRenderStates2D sampler{ SamplerState::ClampNearest };
+			for (const auto& bd : loadedStage_.blocks)
+			{
+				maps_[bd.num].draw(bd.pos);
+			}
 		}
 
 #ifdef DEBUGGING
