@@ -185,7 +185,8 @@ void Collision::CheckBulletsAlive(Array<std::unique_ptr<Bullet>>& bullets,
 
 bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 	Array<std::unique_ptr<Enemy>>& enemies,
-	const OnEnemyDefeat& onDefeat)
+	const OnEnemyDefeat& onDefeat,
+	const OnEnemyHit& onHit)
 {
 	bool bossKilled = false;
 
@@ -197,8 +198,10 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 		{
 			if ((*enemy)->getRectF().intersects((*bt)->getCircle()))
 			{
+				const Vec2 hitPos = (*bt)->getPos();
 				bt = bullets.erase(bt);
 				(*enemy)->takeDamage(1);
+				if (onHit) onHit(hitPos);
 
 				if ((*enemy)->getHp() < 1)
 				{

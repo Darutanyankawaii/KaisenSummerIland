@@ -8,6 +8,28 @@
 namespace {
 	constexpr int kBackgroundTileCount = 6;
 
+	// 弾ヒット時の小さな閃光 (撃破ではない被弾)。短時間で消える。
+	struct HitSparkEffect : IEffect
+	{
+		Vec2 pos_;
+		double duration_ = 0.15;
+
+		explicit HitSparkEffect(const Vec2& pos) : pos_(pos) {}
+
+		bool update(double t) override
+		{
+			if (t > duration_) return false;
+			const double progress = t / duration_;
+			const double alpha = 1.0 - progress;
+			const double r = 4.0 + progress * 14.0;
+			// 白い閃光
+			Circle(pos_, r).draw(ColorF{ 1.0, 1.0, 1.0, alpha });
+			// 黄色の外輪
+			Circle(pos_, r * 1.3).drawFrame(2.0, ColorF{ 1.0, 0.9, 0.3, alpha });
+			return true;
+		}
+	};
+
 	// 敵撃破時の拡散リング+内側フラッシュ。kDuration 秒で消える。
 	struct EnemyDefeatEffect : IEffect
 	{
@@ -154,6 +176,10 @@ void Game::updateBullets()
 			const double d = isBoss ? 0.7 : 0.35;
 			effects_.add<EnemyDefeatEffect>(pos, c, r, d);
 			if (isBoss) camera_.triggerShake(14.0, 0.55);
+		},
+		[this](const Vec2& hitPos)
+		{
+			effects_.add<HitSparkEffect>(hitPos);
 		}))
 	{
 		changeScene(SceneName::GameClear);
