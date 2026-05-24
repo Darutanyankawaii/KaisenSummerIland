@@ -111,9 +111,9 @@ void Collision::CollisionWithGround(const Array<Block>& blocks, std::unique_ptr<
 			resolveGroundTouchSolid(block.getRegion(), *player, true, grounded);
 			if (grounded) player->setGround(true);
 		}
-		else
+		else if (block.getFlag() == 2)
 		{
-			// 上からのみ着地できる薄いブロック等
+			// 上からのみ着地できる薄いブロック (ハーフブロック)
 			if (block.getRegion().intersects(player->getRectF().bottom()) && player->getSpeedY() >= 0)
 			{
 				const double blockTop = block.getRegion().topCenter().y;
@@ -143,7 +143,7 @@ void Collision::CollisionWithGround(const Array<Block>& blocks, Array<std::uniqu
 					enemy->setAccelY(0);
 				}
 			}
-			else
+			else if (block.getFlag() == 2)
 			{
 				if (block.getRegion().intersects(enemy->getRectF().bottom()) && enemy->getSpeedY() >= 0)
 				{
