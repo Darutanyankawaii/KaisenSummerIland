@@ -175,11 +175,13 @@ public:
 	explicit Fish(const Vec2& pos);
 	void moveX() override;
 	void moveY() override;
+	void update() override;
 	void draw() const override;
 
 private:
 	double swimTime_ = 0.0;
 	double baseY_ = 0.0;
+	double bubbleTimer_ = 0.0;
 };
 
 class Maguro : public Enemy

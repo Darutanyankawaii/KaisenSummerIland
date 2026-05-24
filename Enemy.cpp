@@ -238,6 +238,34 @@ void Fish::moveY()
 	pos_.y = baseY_ + std::sin(swimTime_ * kFreq) * kAmplitude;
 }
 
+void Fish::update()
+{
+	const double dt = Scene::DeltaTime();
+
+	// 一定間隔で真下方向にバブルを射出
+	constexpr double kBubbleInterval = 1.5;
+	constexpr BulletParams kBubbleParams{
+		.bulletSpeed = 1.0,
+		.fallSpeed = 1.0,
+		.size = 10,
+		.lifeSpan = 4.0,
+	};
+	bubbleTimer_ += dt;
+	if (bubbleTimer_ >= kBubbleInterval)
+	{
+		bullets_.push_back(std::make_unique<Bullet>(
+			getRectF().center(), Vec2{ 0.0, 1.0 }, kBubbleParams));
+		bubbleTimer_ = 0.0;
+	}
+
+	// バブル進行 (重力に近い感覚で下方向)
+	constexpr double kBubbleFallSpeed = 90.0; // px/sec
+	for (auto& b : bullets_)
+	{
+		b->addPos(Vec2{ 0.0, dt * kBubbleFallSpeed });
+	}
+}
+
 void Fish::draw() const
 {
 	const Vec2 at = getSpriteDrawPos();
@@ -249,6 +277,12 @@ void Fish::draw() const
 	else
 	{
 		tex.draw(at);
+	}
+
+	// バブル描画
+	for (const auto& b : bullets_)
+	{
+		TextureAsset(GameAssets::Texture::Bullet).drawAt(b->getPos(), Palette::Skyblue);
 	}
 }
 
