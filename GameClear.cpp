@@ -1,5 +1,6 @@
 #include "GameClear.hpp"
 #include "AssetIDs.hpp"
+#include "SoundSystem.hpp"
 
 GameClear::GameClear(const InitData& init) : IScene{ init }
 {
@@ -10,6 +11,7 @@ void GameClear::update()
 {
 	if ((KeyEnter | KeyZ | KeySpace | MouseL).down())
 	{
+		Sound::play(Sound::SE::MenuConfirm);
 		changeScene(SceneName::Title);
 	}
 }

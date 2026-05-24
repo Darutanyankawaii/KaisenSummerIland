@@ -127,6 +127,14 @@ void Player::lastUpdate(const CustomCamera2D& camera, Array<std::unique_ptr<Bull
 	animations_.tick(state_, weaponId(), attackDir_);
 
 	playSound();
+
+	// 着地検出
+	if (!prevIsGround_ && isGround_)
+	{
+		Sound::play(Sound::SE::Land);
+	}
+	prevIsGround_ = isGround_;
+
 	prevState_ = state_;
 }
 
@@ -233,6 +241,11 @@ void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>
 		shotNow_ = true;
 		// 単発・連射いずれも同フレームで発射 (連射は次フレーム以降も継続)
 		fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
+		if (!fired)
+		{
+			// クールタイム中: 空打ちフィードバック
+			Sound::play(Sound::SE::Empty);
+		}
 	}
 	else if (isHolding && weapon_->isContinuous())
 	{

@@ -138,6 +138,32 @@ namespace Sound
 		// ジャンプ: 短い上昇スイープ
 		g_audios[SE::Jump] = Audio(sineSweep(350.0, 600.0, 0.1, 0.2));
 
+		// 着地: 短い低音ノイズ (鈍い接地音)
+		g_audios[SE::Land] = Audio(thudNoise(80.0, 0.08, 0.18));
+
+		// 空打ち: 弱い短い低音 (押した感覚はあるが控えめ)
+		g_audios[SE::Empty] = Audio(sineDecay(220.0, 0.04, 0.12));
+
+		// HP 回復: 暖かい上昇 sine
+		g_audios[SE::HpRecover] = Audio(sineSweep(440.0, 880.0, 0.3, 0.22));
+
+		// ボス出現: 重低音 + ノイズの長め咆哮
+		g_audios[SE::BossSpawn] = Audio(thudNoise(60.0, 0.7, 0.4));
+
+		// ステージ開始: 短い上昇 chord 風 (C-G)
+		g_audios[SE::StageStart] = Audio(arpeggio({ 523.25, 659.25, 783.99 }, 0.25, 0.2));
+
+		// ステージクリア: 高めのファンファーレ風 (C-E-G-C)
+		g_audios[SE::StageClear] = Audio(arpeggio({ 523.25, 659.25, 783.99, 1046.50 }, 0.5, 0.3));
+
+		// ゲームオーバー: 強めの下降スイープ
+		g_audios[SE::GameOverJingle] = Audio(sineSweep(400.0, 100.0, 0.6, 0.35));
+
+		// メニュー: 各操作で軽快な beep
+		g_audios[SE::MenuSelect] = Audio(sineDecay(800.0, 0.05, 0.15));
+		g_audios[SE::MenuConfirm] = Audio(sineDecay(1200.0, 0.1, 0.2));
+		g_audios[SE::MenuCancel] = Audio(sineDecay(300.0, 0.1, 0.15));
+
 		// BGM はデフォルトでループ + SE が聞き取れるよう音量を抑える
 		setLoop(SE::BGM, true);
 		setVolume(SE::BGM, 0.15);

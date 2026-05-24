@@ -1,4 +1,5 @@
 #include "How2Play.hpp"
+#include "SoundSystem.hpp"
 
 How2Play::How2Play(const InitData& init) : IScene{ init }
 {
@@ -9,6 +10,7 @@ void How2Play::update()
 {
 	if (back.leftClicked())
 	{
+		Sound::play(Sound::SE::MenuCancel);
 		changeScene(SceneName::Title);
 	}
 }

@@ -1,6 +1,7 @@
 #include "StageSelect.hpp"
 #include "StageRepository.hpp"
 #include "AssetIDs.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	constexpr Color kColorA{ 255, 151, 75 };
@@ -35,6 +36,7 @@ void StageSelect::update()
 	{
 		if (!stageIDList_.isEmpty())
 		{
+			Sound::play(Sound::SE::MenuConfirm);
 			getData().currentStageID = stageIDList_[selectedStage_];
 			changeScene(SceneName::Game);
 		}
@@ -45,11 +47,13 @@ void StageSelect::update()
 		{
 			wheelFlag_ = 0;
 			selectedStage_ = (selectedStage_ + stageIDList_.size() - 1) % stageIDList_.size();
+			Sound::play(Sound::SE::MenuSelect);
 		}
 		if ((KeyS | KeyDown).down() || wheelFlag_ == -1)
 		{
 			wheelFlag_ = 0;
 			selectedStage_ = (selectedStage_ + 1) % stageIDList_.size();
+			Sound::play(Sound::SE::MenuSelect);
 		}
 	}
 

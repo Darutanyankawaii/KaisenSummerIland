@@ -101,6 +101,7 @@ private:
 	int playerDir_ = 1;
 	Vec2 attackDir_{ 1, 0 };
 	bool isGround_ = false;
+	bool prevIsGround_ = false; // 前フレームの接地状態 (着地 SE 検出用)
 
 	int hp_ = 5;
 	int walkSpeed_ = 5;

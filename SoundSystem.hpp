@@ -20,8 +20,22 @@ namespace Sound
 		EnemyShot,     // 敵の弾発射
 		EnemyDefeat,   // 敵撃破
 		BossDefeat,    // ボス撃破 (特別)
-		ItemPickup,    // アイテム取得
+		ItemPickup,    // 武器アイテム取得
 		Jump,          // ジャンプ
+		Land,          // 着地
+		Empty,         // 空打ち (クールタイム中のクリック)
+		HpRecover,     // HP 回復 (かき氷)
+		BossSpawn,     // ボス出現
+
+		// ----- シーン遷移・ゲームフロー -----
+		StageStart,    // ステージ開始
+		StageClear,    // ステージクリア (ゴール到達)
+		GameOverJingle,// ゲームオーバー演出
+
+		// ----- メニュー操作 -----
+		MenuSelect,    // 選択カーソル移動
+		MenuConfirm,   // 決定
+		MenuCancel,    // 戻る / キャンセル
 	};
 
 	// 起動時に 1 回だけ呼ぶ。ファイル読み込みと波形生成を全て行う。

@@ -33,6 +33,8 @@ Game::Game(const InitData& init) : IScene{ init }
 
 	maptip_ = TextureAsset(GameAssets::Texture::Map1);
 	registMaptip();
+
+	Sound::play(Sound::SE::StageStart);
 }
 
 Game::~Game()
@@ -57,6 +59,7 @@ void Game::update()
 
 	if (player_->getHp() <= 0)
 	{
+		Sound::play(Sound::SE::GameOverJingle);
 		changeScene(SceneName::GameOver);
 	}
 }
@@ -220,7 +223,10 @@ void Game::PutEnemy(const LoadedStage& stage)
 		case 1: enemies_.push_back(std::make_unique<Curage>(ed.region)); break;
 		case 2: enemies_.push_back(std::make_unique<Kani>(ed.region));   break;
 		case 3: enemies_.push_back(std::make_unique<Tako>(ed.region));   break;
-		case 9: enemies_.push_back(std::make_unique<Maguro>(ed.region)); break;
+		case 9:
+			enemies_.push_back(std::make_unique<Maguro>(ed.region));
+			Sound::play(Sound::SE::BossSpawn);
+			break;
 		default: break;
 		}
 	}
@@ -252,6 +258,7 @@ void Game::checkGoal()
 	{
 		if (block.getFlag() == 4 && block.getRegion().intersects(player_->getRectF()))
 		{
+			Sound::play(Sound::SE::StageClear);
 			const int currentStageID = getData().currentStageID;
 			getData().currentStageID = StageRepository::instance().get(currentStageID).nextStageID;
 			changeScene(SceneName::Game);
