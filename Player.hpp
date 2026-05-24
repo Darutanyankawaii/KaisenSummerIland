@@ -104,7 +104,6 @@ private:
 	int walkSpeed_ = 5;
 	float gravity_ = 1.0f;
 
-	bool aimFlag_ = false;
 	bool shotNow_ = false;
 	double shotTime_ = 0.0;
 

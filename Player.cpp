@@ -60,13 +60,13 @@ void Player::updateX()
 		if (isGround_)
 			state_ = State::Stand;
 
-		if ((KeyD | KeyRight).pressed() && !aimFlag_)
+		if ((KeyD | KeyRight).pressed())
 		{
 			playerDir_ = 1;
 			speed_.x = playerDir_ * walkSpeed_;
 			state_ = State::Walk;
 		}
-		else if ((KeyA | KeyLeft).pressed() && !aimFlag_)
+		else if ((KeyA | KeyLeft).pressed())
 		{
 			playerDir_ = -1;
 			speed_.x = playerDir_ * walkSpeed_;
@@ -211,8 +211,6 @@ void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>
 	// クールタイムは常に進行
 	weapon_->tick(Scene::DeltaTime());
 
-	aimFlag_ = false;
-
 	const bool isFirstClick = MouseL.down();
 	const bool isHolding = MouseL.pressed();
 	const bool inAimingState = (state_ == State::Aiming);
@@ -225,9 +223,7 @@ void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>
 
 	if (isFirstClick)
 	{
-		// 任意の武器: クリックの瞬間に aiming へ
-		speed_.x = 0;
-		aimFlag_ = true;
+		// 任意の武器: クリックの瞬間に aiming へ (移動は止めない)
 		attackDir_ = (Cursor::Pos() - getCenter()).normalize();
 		state_ = State::Aiming;
 		shotNow_ = true;
