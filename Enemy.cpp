@@ -136,7 +136,7 @@ void Tako::draw() const
 {
 	for (const auto& bullet : bullets_)
 	{
-		TextureAsset(GameAssets::Texture::Bullet).drawAt(bullet->getPos());
+		TextureAsset(GameAssets::Texture::Bullet).drawAt(bullet->getPos(), Palette::Red);
 	}
 	const Vec2 drawAt = getSpriteDrawPos();
 	if (!restingPhase_)
@@ -199,7 +199,7 @@ void Maguro::draw() const
 
 	for (const auto& bullet : bullets_)
 	{
-		TextureAsset(GameAssets::Texture::Bullet2).drawAt(bullet->getPos());
+		TextureAsset(GameAssets::Texture::Bullet2).drawAt(bullet->getPos(), Palette::Red);
 	}
 }
 
