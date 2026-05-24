@@ -100,6 +100,8 @@ void MapParser::handleEnemy(const CellContext& c)
 	case U'1': num = 1; break;
 	case U'2': num = 2; break;
 	case U'3': num = 3; break;
+	case U'4': num = 4; break;
+	case U'5': num = 5; break;
 	case U'9': num = 9; break;
 	default:   num = 1; break;
 	}

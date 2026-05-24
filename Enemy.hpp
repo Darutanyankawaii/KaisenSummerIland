@@ -157,6 +157,26 @@ private:
 	bool restingPhase_ = true; // 旧 flag_ (true=待機, false=突進)
 };
 
+class AppleMan : public Enemy
+{
+public:
+	explicit AppleMan(const Vec2& pos);
+	void draw() const override;
+};
+
+class Fish : public Enemy
+{
+public:
+	explicit Fish(const Vec2& pos);
+	void moveX() override;
+	void moveY() override;
+	void draw() const override;
+
+private:
+	double swimTime_ = 0.0;
+	double baseY_ = 0.0;
+};
+
 class Maguro : public Enemy
 {
 public:

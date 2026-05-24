@@ -220,9 +220,11 @@ void Game::PutEnemy(const LoadedStage& stage)
 	{
 		switch (ed.num)
 		{
-		case 1: enemies_.push_back(std::make_unique<Curage>(ed.region)); break;
-		case 2: enemies_.push_back(std::make_unique<Kani>(ed.region));   break;
-		case 3: enemies_.push_back(std::make_unique<Tako>(ed.region));   break;
+		case 1: enemies_.push_back(std::make_unique<Curage>(ed.region));   break;
+		case 2: enemies_.push_back(std::make_unique<Kani>(ed.region));     break;
+		case 3: enemies_.push_back(std::make_unique<Tako>(ed.region));     break;
+		case 4: enemies_.push_back(std::make_unique<AppleMan>(ed.region)); break;
+		case 5: enemies_.push_back(std::make_unique<Fish>(ed.region));     break;
 		case 9:
 			enemies_.push_back(std::make_unique<Maguro>(ed.region));
 			Sound::play(Sound::SE::BossSpawn);

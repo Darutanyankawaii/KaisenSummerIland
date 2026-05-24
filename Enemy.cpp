@@ -161,6 +161,69 @@ void Tako::draw() const
 		TextureAsset(GameAssets::Texture::Octopus2).draw(drawAt);
 }
 
+// ===== AppleMan =====
+
+AppleMan::AppleMan(const Vec2& pos)
+	: Enemy(pos)
+{
+	// AppleMan スプライト 64x64 のうち実体は y=5..58, x=4..58
+	SIZE_ = Vec2(55, 54);
+	spriteDrawOffset_ = Vec2(-4, -5);
+	pos_ = pos - spriteDrawOffset_;
+	walkSpeed_ = 4;
+	hp_ = 2;
+	accel_.y += gravity_;
+}
+
+void AppleMan::draw() const
+{
+	TextureAsset(GameAssets::Texture::AppleMan).draw(getSpriteDrawPos());
+}
+
+// ===== Fish =====
+
+Fish::Fish(const Vec2& pos)
+	: Enemy(pos)
+{
+	// fish スプライト 80x80 のうち実体は y=20..59, x=10..68
+	SIZE_ = Vec2(59, 40);
+	spriteDrawOffset_ = Vec2(-10, -20);
+	pos_ = pos - spriteDrawOffset_;
+	walkSpeed_ = 2;
+	hp_ = 1;
+	gravity_ = 0.0f;
+	accel_.y = 0.0f;
+	baseY_ = pos_.y;
+}
+
+void Fish::moveX()
+{
+	speed_.x = dir_ ? walkSpeed_ : -walkSpeed_;
+	pos_.x += speed_.x;
+}
+
+void Fish::moveY()
+{
+	swimTime_ += Scene::DeltaTime();
+	constexpr double kAmplitude = 20.0;
+	constexpr double kFreq = 1.2;
+	pos_.y = baseY_ + std::sin(swimTime_ * kFreq) * kAmplitude;
+}
+
+void Fish::draw() const
+{
+	const Vec2 at = getSpriteDrawPos();
+	const Texture tex = TextureAsset(GameAssets::Texture::Fish);
+	if (dir_)
+	{
+		tex.mirrored().draw(at);
+	}
+	else
+	{
+		tex.draw(at);
+	}
+}
+
 // ===== Maguro =====
 
 Maguro::Maguro(const Vec2& pos)

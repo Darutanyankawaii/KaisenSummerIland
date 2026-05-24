@@ -23,6 +23,9 @@ namespace GameAssets
 		inline constexpr StringView GunShot = U"GUN_SHOT";
 		inline constexpr StringView GunMachine = U"GUN_MACHINE";
 		inline constexpr StringView Heart = U"Heart";
+		inline constexpr StringView AppleMan = U"APPLE_MAN";
+		inline constexpr StringView Fish = U"FISH";
+		inline constexpr StringView Sky = U"SKY";
 	}
 
 	// 音声は SoundSystem (Sound::SE) で管理する
