@@ -21,20 +21,20 @@ namespace {
 
 void TakoAI::tick(Tako& self, double dt)
 {
-	// ガス弾の生成 (一定間隔で必ず生成)
+	// ガス弾の生成 (一定間隔で必ず生成、プレイヤー方向に発射)
 	gasTimer_ += dt;
 	if (gasTimer_ > kGasInterval)
 	{
 		self.bullets().push_back(
 			Bullet::createAimed(self.getPos(),
-				Vec2(self.getPosX() - 100, self.getPosY()), kGasParams));
+				self.getPlayerPos(), kGasParams));
 		gasTimer_ = 0.0;
 	}
 
-	// ガス弾の進行 / 寿命
+	// ガス弾の進行 / 寿命 (各弾の dir に従って進行)
 	for (auto& bullet : self.bullets())
 	{
-		bullet->addPos(Vec2{ -dt * kGasHorizontalSpeed, 0 });
+		bullet->addPos(bullet->getDir() * (dt * kGasHorizontalSpeed));
 		bullet->decreaseLifeSpan(dt);
 	}
 	self.bullets().remove_if([](const std::unique_ptr<Bullet>& b) {
