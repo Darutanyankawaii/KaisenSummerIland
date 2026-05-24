@@ -21,6 +21,8 @@ public:
 	void recoverDamage(int damage);
 	void receiveDamage(int damage);
 	void knockBackToEnemy(const Array<std::unique_ptr<Enemy>>& enemies);
+	// 弾被弾時の処理 (無敵時間中は無効)。bulletPos からノックバック方向を決定
+	void onBulletHit(const Vec2& bulletPos);
 
 	int getHp() const { return hp_; }
 	int getDir() const { return playerDir_; }

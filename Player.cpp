@@ -167,6 +167,17 @@ void Player::knockBackToEnemy(const Array<std::unique_ptr<Enemy>>& enemies)
 	}
 }
 
+void Player::onBulletHit(const Vec2& bulletPos)
+{
+	if (isInvincible_) return;
+	hp_ -= 1;
+	collisionalTimer_.restart();
+	invincibleTimer_.restart();
+	isKnockback_ = true;
+	isInvincible_ = true;
+	knockBackDir_ = (pos_.x < bulletPos.x) ? -1 : 1;
+}
+
 void Player::recoverDamage(int damage)
 {
 	hp_ += damage;

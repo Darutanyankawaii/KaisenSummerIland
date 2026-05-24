@@ -233,8 +233,9 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 	{
 		if (player->getRectF().intersects((*bt)->getCircle()))
 		{
+			const Vec2 bulletPos = (*bt)->getPos();
 			bt = bullets.erase(bt);
-			player->receiveDamage(1);
+			player->onBulletHit(bulletPos);
 			return true;
 		}
 		++bt;
