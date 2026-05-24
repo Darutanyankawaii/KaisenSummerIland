@@ -149,6 +149,7 @@ public:
 
 private:
 	std::unique_ptr<TakoAI> ai_;
+	Vec2 spawnPos_{ 0, 0 }; // 画面外に逃げないよう上昇上限を spawn から計算するため記憶
 	bool restingPhase_ = true; // 旧 flag_ (true=待機, false=突進)
 };
 

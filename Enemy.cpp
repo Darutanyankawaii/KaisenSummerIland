@@ -117,6 +117,7 @@ Tako::Tako(const Vec2& pos)
 	SIZE_ = Vec2(26, 47);
 	spriteDrawOffset_ = Vec2(-11, 0);
 	pos_ = pos - spriteDrawOffset_;
+	spawnPos_ = pos_;
 }
 
 Tako::~Tako() = default;
@@ -125,6 +126,15 @@ void Tako::update()
 {
 	// AI 駆動: 移動・ガス弾管理を全部 AI に任せる
 	ai_->tick(*this, Scene::DeltaTime());
+
+	// 浮遊して画面外まで上昇しないよう、spawn から一定範囲に制限
+	constexpr double kMaxRise = 80.0;
+	const double upperBound = spawnPos_.y - kMaxRise;
+	if (pos_.y < upperBound)
+	{
+		pos_.y = upperBound;
+		if (speed_.y < 0) speed_.y = 0;
+	}
 }
 
 void Tako::moveX()
