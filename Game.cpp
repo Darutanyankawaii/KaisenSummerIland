@@ -7,6 +7,51 @@
 
 namespace {
 	constexpr int kBackgroundTileCount = 6;
+
+	// 弾ヒット時の小さな閃光 (撃破ではない被弾)。短時間で消える。
+	struct HitSparkEffect : IEffect
+	{
+		Vec2 pos_;
+		double duration_ = 0.15;
+
+		explicit HitSparkEffect(const Vec2& pos) : pos_(pos) {}
+
+		bool update(double t) override
+		{
+			if (t > duration_) return false;
+			const double progress = t / duration_;
+			const double alpha = 1.0 - progress;
+			const double r = 4.0 + progress * 14.0;
+			// 白い閃光
+			Circle(pos_, r).draw(ColorF{ 1.0, 1.0, 1.0, alpha });
+			// 黄色の外輪
+			Circle(pos_, r * 1.3).drawFrame(2.0, ColorF{ 1.0, 0.9, 0.3, alpha });
+			return true;
+		}
+	};
+
+	// 敵撃破時の拡散リング+内側フラッシュ。kDuration 秒で消える。
+	struct EnemyDefeatEffect : IEffect
+	{
+		Vec2 pos_;
+		ColorF color_;
+		double maxRadius_;
+		double duration_;
+
+		EnemyDefeatEffect(const Vec2& pos, const ColorF& color, double maxRadius, double duration)
+			: pos_(pos), color_(color), maxRadius_(maxRadius), duration_(duration) {}
+
+		bool update(double t) override
+		{
+			if (t > duration_) return false;
+			const double progress = t / duration_;
+			const double r = maxRadius_ * progress;
+			const double alpha = 1.0 - progress;
+			Circle(pos_, r).drawFrame(3.0, ColorF{ color_, alpha });
+			Circle(pos_, r * 0.5).draw(ColorF{ color_, alpha * 0.4 });
+			return true;
+		}
+	};
 }
 
 Game::Game(const InitData& init) : IScene{ init }
@@ -123,14 +168,29 @@ void Game::updateBullets()
 
 	Collision::CheckBulletsAlive(playerBullets_, blocks_, camera_);
 
-	if (Collision::CollisionWithBullet(playerBullets_, enemies_))
+	if (Collision::CollisionWithBullet(playerBullets_, enemies_,
+		[this](const Vec2& pos, bool isBoss)
+		{
+			const ColorF c = isBoss ? ColorF{ 1.0, 0.4, 0.4 } : ColorF{ 1.0, 0.9, 0.4 };
+			const double r = isBoss ? 130.0 : 60.0;
+			const double d = isBoss ? 0.7 : 0.35;
+			effects_.add<EnemyDefeatEffect>(pos, c, r, d);
+			if (isBoss) camera_.triggerShake(14.0, 0.55);
+		},
+		[this](const Vec2& hitPos)
+		{
+			effects_.add<HitSparkEffect>(hitPos);
+		}))
 	{
 		changeScene(SceneName::GameClear);
 	}
 
 	for (auto& enemy : enemies_)
 	{
-		Collision::CollisionWithBullet(enemy->bullets(), player_);
+		if (Collision::CollisionWithBullet(enemy->bullets(), player_))
+		{
+			camera_.triggerShake(5.0, 0.18);
+		}
 		Collision::CheckBulletsAlive(enemy->bullets(), blocks_, camera_);
 	}
 }
@@ -139,6 +199,7 @@ void Game::draw() const
 {
 	{
 		const auto t = camera_.createTransformer();
+		const Transformer2D shakeTr{ Mat3x2::Translate(camera_.getShakeOffset()), TransformCursor::Yes };
 
 		const BgKind bg = StageRepository::instance().get(getData().currentStageID).bg;
 		const StringView bgTex = (bg == BgKind::Sky)
@@ -175,6 +236,8 @@ void Game::draw() const
 		drawItem();
 		player_->draw();
 
+		effects_.update();
+
 		TextureAsset(GameAssets::Texture::LockOn).resized(30).drawAt(Cursor::Pos());
 	}
 
@@ -182,10 +245,31 @@ void Game::draw() const
 	{
 		TextureAsset(GameAssets::Texture::Heart).drawAt(680 - i * 45, 30);
 	}
+
+	// 武器クールタイム表示 (左下に円グラフ風: 残量に応じて扇形が縮む)
+	{
+		constexpr Vec2 center{ 60, 700 };
+		constexpr double radius = 28.0;
+		const double ratio = player_->getWeaponCooltimeRatio();
+		// 背景の薄い円
+		Circle(center, radius).draw(ColorF{ 0.1, 0.1, 0.1, 0.5 }).drawFrame(2.0, ColorF{ 1.0, 0.8 });
+		if (ratio > 0.0)
+		{
+			// 残量を扇形で表示 (12 時方向起点、時計回り)
+			const double angle = ratio * Math::TwoPi;
+			Circle(center, radius - 4).drawPie(0.0, angle, ColorF{ 1.0, 0.6, 0.2, 0.85 });
+		}
+		else
+		{
+			// 発射可: 緑の中央円
+			Circle(center, radius - 8).draw(ColorF{ 0.3, 1.0, 0.4, 0.7 });
+		}
+	}
 }
 
 void Game::updateCamera()
 {
+	camera_.updateShake(Scene::DeltaTime());
 	camera_.update();
 
 	const double halfSceneWidth = Scene::Width() / 2.0;

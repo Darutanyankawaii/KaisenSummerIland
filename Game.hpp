@@ -50,4 +50,6 @@ private:
 	LoadedStage loadedStage_;
 
 	CustomCamera2D camera_;
+
+	mutable Effect effects_; // 撃破等の視覚エフェクト (draw const 内で update するため mutable)
 };

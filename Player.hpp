@@ -2,6 +2,7 @@
 #include "Basic.hpp"
 #include "Camera.hpp"
 #include "PlayerAnimationSet.hpp"
+#include "IWeapon.hpp"
 
 class Bullet;
 class Enemy;
@@ -25,6 +26,9 @@ public:
 	void onBulletHit(const Vec2& bulletPos);
 
 	int getHp() const { return hp_; }
+	// 現武器のクールタイム残量比 (0..1、HUD 表示用)。武器未装備時は 0
+	double getWeaponCooltimeRatio() const { return weapon_ ? weapon_->cooltimeRatio() : 0.0; }
+	int getWeaponId() const { return weapon_ ? weapon_->weaponId() : -1; }
 	int getDir() const { return playerDir_; }
 
 	double getPosX() const { return pos_.x; }
