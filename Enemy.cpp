@@ -175,7 +175,8 @@ void Tako::draw() const
 		TextureAsset(GameAssets::Texture::Bullet).drawAt(bullet->getPos(), Palette::Red);
 	}
 	const Vec2 drawAt = getSpriteDrawPos();
-	if (!restingPhase_)
+	// 上昇中 (speed.y < 0) は Octopus_1 (アクション)、それ以外は Octopus_2 (待機)
+	if (speed_.y < 0.0)
 		TextureAsset(GameAssets::Texture::Octopus1).draw(drawAt);
 	else
 		TextureAsset(GameAssets::Texture::Octopus2).draw(drawAt);
