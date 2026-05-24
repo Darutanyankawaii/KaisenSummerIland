@@ -2,6 +2,7 @@
 #include "Basic.hpp"
 #include "AssetRegistry.hpp"
 #include "AssetIDs.hpp"
+#include "SoundSystem.hpp"
 #include "Game.hpp"
 #include "StageSelect.hpp"
 #include "Title.hpp"
@@ -26,9 +27,9 @@ void Main()
 	Scene::SetBackground(ColorF{ 1.0, 1.0, 1.0 });
 
 	AssetRegistry::registerAll();
+	Sound::init();
 
-	AudioAsset(GameAssets::Audio::BGM).setLoop(true);
-	AudioAsset(GameAssets::Audio::BGM).play();
+	Sound::start(Sound::SE::BGM);
 
 	// FPS 制限 (sleep ベース)
 	constexpr double kTargetFPS = 60.0;

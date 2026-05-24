@@ -25,12 +25,7 @@ namespace GameAssets
 		inline constexpr StringView Heart = U"Heart";
 	}
 
-	namespace Audio
-	{
-		inline constexpr StringView Walk = U"walk";
-		inline constexpr StringView Shot = U"shot";
-		inline constexpr StringView BGM = U"bgm";
-	}
+	// 音声は SoundSystem (Sound::SE) で管理する
 
 	namespace Font
 	{

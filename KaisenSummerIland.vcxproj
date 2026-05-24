@@ -134,6 +134,7 @@
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="PlayerAnimationSet.cpp" />
     <ClCompile Include="ShotgunWeapon.cpp" />
+    <ClCompile Include="SoundSystem.cpp" />
     <ClCompile Include="StageRepository.cpp" />
     <ClCompile Include="StageSelect.cpp" />
     <ClCompile Include="StarfishWeapon.cpp" />
@@ -374,6 +375,7 @@
     <ClInclude Include="PlayerAnimationSet.hpp" />
     <ClInclude Include="Regist.hpp" />
     <ClInclude Include="ShotgunWeapon.hpp" />
+    <ClInclude Include="SoundSystem.hpp" />
     <ClInclude Include="StageRepository.hpp" />
     <ClInclude Include="StageSelect.hpp" />
     <ClInclude Include="StarfishWeapon.hpp" />

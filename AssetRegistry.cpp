@@ -11,9 +11,7 @@ void AssetRegistry::registerAll()
 
 void AssetRegistry::registerAudio()
 {
-	AudioAsset::Register(String{ GameAssets::Audio::Walk }, U"sound/walk.ogg");
-	AudioAsset::Register(String{ GameAssets::Audio::Shot }, U"sound/shot.ogg");
-	AudioAsset::Register(String{ GameAssets::Audio::BGM }, U"sound/bgm.mp3");
+	// 音声は SoundSystem (Sound::init) で一元管理する
 }
 
 void AssetRegistry::registerFonts()

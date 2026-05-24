@@ -3,7 +3,7 @@
 #include "Enemy.hpp"
 #include "IWeapon.hpp"
 #include "WeaponFactory.hpp"
-#include "AssetIDs.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	// 発射位置: スプライト中心 (pos_ + (14, 23)) を基準に、向きに応じて手側にずらす
@@ -20,7 +20,7 @@ Player::Player()
 
 Player::~Player()
 {
-	AudioAsset(GameAssets::Audio::Walk).stop();
+	Sound::stop(Sound::SE::Walk);
 }
 
 void Player::setWeapon(int weaponId)
@@ -196,13 +196,13 @@ void Player::playSound()
 
 	if (prevState_ == State::Walk)
 	{
-		AudioAsset(GameAssets::Audio::Walk).stop();
+		Sound::stop(Sound::SE::Walk);
 	}
 
 	if (state_ == State::Walk && isGround_)
 	{
-		AudioAsset(GameAssets::Audio::Walk).setLoop(true);
-		AudioAsset(GameAssets::Audio::Walk).play();
+		Sound::setLoop(Sound::SE::Walk, true);
+		Sound::start(Sound::SE::Walk);
 	}
 }
 
@@ -244,6 +244,6 @@ void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>
 
 	if (fired)
 	{
-		AudioAsset(GameAssets::Audio::Shot).playOneShot();
+		Sound::play(Sound::SE::PlayerShot);
 	}
 }

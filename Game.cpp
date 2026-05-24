@@ -3,6 +3,7 @@
 #include "StageRepository.hpp"
 #include "MapParser.hpp"
 #include "AssetIDs.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	constexpr int kBackgroundTileCount = 6;
@@ -36,7 +37,7 @@ Game::Game(const InitData& init) : IScene{ init }
 
 Game::~Game()
 {
-	Audio(GameAssets::Audio::Shot).stopAllShots();
+	Sound::stopAllShots(Sound::SE::PlayerShot);
 }
 
 void Game::update()
