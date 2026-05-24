@@ -121,6 +121,7 @@
     <ClCompile Include="BucketWeapon.cpp" />
     <ClCompile Include="Bullet.cpp" />
     <ClCompile Include="Collision.cpp" />
+    <ClCompile Include="ElipseUtil.cpp" />
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="GameClear.cpp" />
@@ -136,6 +137,7 @@
     <ClCompile Include="ShotgunWeapon.cpp" />
     <ClCompile Include="SaveManager.cpp" />
     <ClCompile Include="SoundSystem.cpp" />
+    <ClCompile Include="StageElipse.cpp" />
     <ClCompile Include="StageRepository.cpp" />
     <ClCompile Include="StageSelect.cpp" />
     <ClCompile Include="StarfishWeapon.cpp" />
@@ -376,14 +378,13 @@
     <ClInclude Include="PlayerAnimationSet.hpp" />
     <ClInclude Include="Regist.hpp" />
     <ClInclude Include="ShotgunWeapon.hpp" />
-    <ClInclude Include="SaveManager.hpp" />
-    <ClInclude Include="SoundSystem.hpp" />
     <ClInclude Include="StageRepository.hpp" />
     <ClInclude Include="StageSelect.hpp" />
     <ClInclude Include="StarfishWeapon.hpp" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TakoAI.hpp" />
     <ClInclude Include="Title.hpp" />
+    <ClInclude Include="ElipseUtil.hpp" />
     <ClInclude Include="WaterGunWeapon.hpp" />
     <ClInclude Include="WeaponFactory.hpp" />
   </ItemGroup>

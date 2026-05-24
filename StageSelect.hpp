@@ -1,5 +1,7 @@
-#pragma once
+﻿#pragma once
 #include "Basic.hpp"
+#include "ElipseUtil.hpp"
+#include "StageElipse.hpp"
 
 class StageSelect : public App::Scene
 {
@@ -9,8 +11,15 @@ public:
 	void draw() const override;
 
 private:
-	Array<int> stageIDList_;
+	void mouseWheelInput();
+	void gameStartKeyInput();
+	void gameSelectKeyInput();
+	void stageElipseUpdate();
+
+	Array<int32> stageIDList_;
 	size_t selectedStage_ = 0;
+
+	StageElipse stageElipse_;
 
 	const double timeSpan_ = 3.0;
 	const double timeSpace_ = 0.1;

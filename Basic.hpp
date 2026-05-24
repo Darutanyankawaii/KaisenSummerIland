@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <Siv3D.hpp> // OpenSiv3D v0.6.16
 
 inline constexpr int SCENE_WIDTH = 720;

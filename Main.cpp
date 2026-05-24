@@ -1,4 +1,4 @@
-#include <Siv3D.hpp> // Siv3D v0.6.16
+﻿#include <Siv3D.hpp> // Siv3D v0.6.16
 #include "Basic.hpp"
 #include "AssetRegistry.hpp"
 #include "AssetIDs.hpp"
@@ -52,5 +52,7 @@ void Main()
 			System::Sleep(Duration{ (kTargetMs - elapsedMs) / 1000.0 });
 		}
 		sw.restart();
+
+		
 	}
 }

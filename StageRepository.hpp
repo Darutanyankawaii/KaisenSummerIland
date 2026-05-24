@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Basic.hpp"
 
 // ステージメタデータの単一ロード/参照を担う。

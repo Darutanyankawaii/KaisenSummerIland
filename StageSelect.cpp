@@ -1,4 +1,4 @@
-#include "StageSelect.hpp"
+﻿#include "StageSelect.hpp"
 #include "StageRepository.hpp"
 #include "AssetIDs.hpp"
 #include "SoundSystem.hpp"
@@ -31,64 +31,10 @@ StageSelect::StageSelect(const InitData& init) : IScene{ init }
 
 void StageSelect::update()
 {
-	wheelCount_ += Mouse::Wheel() * 5;
-
-	if (wheelCount_ > wheelSpace_)
-	{
-		wheelCount_ = 0;
-		wheelFlag_ = -1;
-	}
-	else if (wheelCount_ < -wheelSpace_)
-	{
-		wheelCount_ = 0;
-		wheelFlag_ = 1;
-	}
-
-	if ((KeyEnter | KeyZ | KeySpace | MouseL).down())
-	{
-		if (!stageIDList_.isEmpty())
-		{
-			Sound::play(Sound::SE::MenuConfirm);
-			getData().currentStageID = stageIDList_[selectedStage_];
-			changeScene(SceneName::Game);
-		}
-	}
-	if (!stageIDList_.isEmpty())
-	{
-		if ((KeyW | KeyUp).down() || wheelFlag_ == 1)
-		{
-			wheelFlag_ = 0;
-			selectedStage_ = (selectedStage_ + stageIDList_.size() - 1) % stageIDList_.size();
-			Sound::play(Sound::SE::MenuSelect);
-		}
-		if ((KeyS | KeyDown).down() || wheelFlag_ == -1)
-		{
-			wheelFlag_ = 0;
-			selectedStage_ = (selectedStage_ + 1) % stageIDList_.size();
-			Sound::play(Sound::SE::MenuSelect);
-		}
-	}
-
-	timeAnim_ += Scene::DeltaTime();
-	if (timeAnim_ > (timeSpan_ + timeSpace_) * 2)
-		timeAnim_ -= (timeSpan_ + timeSpace_) * 2;
-
-	if (timeAnim_ < timeSpan_)
-	{
-		Scene::SetBackground((timeAnim_ < timeSpan_ - timeSpace_) ? kColorA : kColorB);
-	}
-	else if (timeAnim_ < timeSpan_ + timeSpace_)
-	{
-		Scene::SetBackground(kColorB);
-	}
-	else if (timeAnim_ < timeSpan_ * 2 + timeSpace_)
-	{
-		Scene::SetBackground((timeAnim_ < timeSpan_ * 2) ? kColorB : kColorA);
-	}
-	else
-	{
-		Scene::SetBackground(kColorA);
-	}
+	mouseWheelInput();
+	gameStartKeyInput();
+	gameSelectKeyInput();
+	stageElipseUpdate();
 }
 
 void StageSelect::draw() const
@@ -127,5 +73,86 @@ void StageSelect::draw() const
 		FontAsset(GameAssets::Font::StageTitle)(label)
 			.drawAt(Scene::Center() + Point(0, yOffset),
 				ColorF(1.0, 1.0, 1.0, (i == selectedStage_) ? 1.0 : 0.5));
+	}
+
+
+	stageElipse_.draw();
+}
+
+void StageSelect::mouseWheelInput()
+{
+	//マウスホイール
+	//一定の値まで回すとカウント
+	wheelCount_ += Mouse::Wheel() * 5;
+
+	if (wheelCount_ > wheelSpace_)
+	{
+		wheelCount_ = 0;
+		wheelFlag_ = -1;
+	}
+	else if (wheelCount_ < -wheelSpace_)
+	{
+		wheelCount_ = 0;
+		wheelFlag_ = 1;
+	}
+}
+
+void StageSelect::gameStartKeyInput()
+{
+	//ゲームスタート
+	if ((KeyEnter | KeyZ | KeySpace | MouseL).down())
+	{
+		if (!stageIDList_.isEmpty())
+		{
+			Sound::play(Sound::SE::MenuConfirm);
+			getData().currentStageID = stageIDList_[selectedStage_];
+			changeScene(SceneName::Game);
+		}
+	}
+}
+
+void StageSelect::gameSelectKeyInput()
+{
+	if (!stageIDList_.isEmpty())
+	{
+		if ((KeyW | KeyUp).down() || wheelFlag_ == 1)
+		{
+			wheelFlag_ = 0;
+			selectedStage_ = (selectedStage_ + stageIDList_.size() - 1) % stageIDList_.size();
+			Sound::play(Sound::SE::MenuSelect);
+		}
+		if ((KeyS | KeyDown).down() || wheelFlag_ == -1)
+		{
+			wheelFlag_ = 0;
+			selectedStage_ = (selectedStage_ + 1) % stageIDList_.size();
+			Sound::play(Sound::SE::MenuSelect);
+		}
+	}
+}
+
+void StageSelect::stageElipseUpdate()
+{
+	int32 startPoint = 0;
+	int32 endPoint = stageIDList_.size() - 1;
+
+	if (selectedStage_ == startPoint)
+	{
+		stageElipse_.readSelectedStage(2, 5, selectedStage_);
+	}
+	else if (selectedStage_ == startPoint + 1)
+	{
+		stageElipse_.readSelectedStage(1, 5, selectedStage_);
+	}
+	else if (selectedStage_ == (endPoint - 1))
+	{
+		stageElipse_.readSelectedStage(0, 4, selectedStage_);
+	}
+	else if (selectedStage_ == endPoint)
+	{
+		stageElipse_.readSelectedStage(0, 3, selectedStage_);
+	}
+	else
+	{
+		stageElipse_.readSelectedStage(0, 5, selectedStage_);
 	}
 }

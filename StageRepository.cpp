@@ -1,4 +1,4 @@
-#include "StageRepository.hpp"
+﻿#include "StageRepository.hpp"
 
 StageRepository::StageRepository()
 {
@@ -47,6 +47,7 @@ void StageRepository::load()
 	{
 		if (key != 0) sortedIDs_.push_back(key);
 	}
+
 	sortedIDs_.sort();
 }
 

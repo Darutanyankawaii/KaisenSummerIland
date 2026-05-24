@@ -1,4 +1,4 @@
-#include "AssetRegistry.hpp"
+﻿#include "AssetRegistry.hpp"
 #include "AssetIDs.hpp"
 
 void AssetRegistry::registerAll()
@@ -45,6 +45,13 @@ void AssetRegistry::registerTextures()
 	TextureAsset::Register(String{ GameAssets::Texture::GunNormal }, U"image/item_gun/normal_gun.png");
 	TextureAsset::Register(String{ GameAssets::Texture::GunShot }, U"image/item_gun/shot_gun.png");
 	TextureAsset::Register(String{ GameAssets::Texture::GunMachine }, U"image/item_gun/machine_gun.png");
+
+	// ステージサムネイル
+	TextureAsset::Register(U"Thumbnail_1", U"image/Thumbnail/stage_tutorial.png");
+	TextureAsset::Register(U"Thumbnail_2", U"image/Thumbnail/stage_stoneWorld.png");
+	TextureAsset::Register(U"Thumbnail_3", U"image/Thumbnail/stage_pandd.png");
+	TextureAsset::Register(U"Thumbnail_4", U"image/Thumbnail/stage_maguro.png");
+	TextureAsset::Register(U"Thumbnail_5", U"image/Thumbnail/stage_null.png");
 
 	// その他
 	TextureAsset::Register(String{ GameAssets::Texture::Heart }, U"heart.png");
