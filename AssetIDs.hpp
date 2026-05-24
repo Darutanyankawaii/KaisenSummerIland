@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Basic.hpp"
 
 // アセット ID の一元定義。
@@ -23,6 +23,11 @@ namespace GameAssets
 		inline constexpr StringView GunShot = U"GUN_SHOT";
 		inline constexpr StringView GunMachine = U"GUN_MACHINE";
 		inline constexpr StringView Heart = U"Heart";
+		inline constexpr StringView Thumbnail_1 = U"Thumbnail_1";
+		inline constexpr StringView Thumbnail_2 = U"Thumbnail_2";
+		inline constexpr StringView Thumbnail_3 = U"Thumbnail_3";
+		inline constexpr StringView Thumbnail_4 = U"Thumbnail_4";
+		inline constexpr StringView Thumbnail_5 = U"Thumbnail_5";
 	}
 
 	namespace Audio

@@ -1,4 +1,4 @@
-#include "StageSelect.hpp"
+﻿#include "StageSelect.hpp"
 #include "StageRepository.hpp"
 #include "AssetIDs.hpp"
 
@@ -18,6 +18,32 @@ StageSelect::StageSelect(const InitData& init) : IScene{ init }
 
 void StageSelect::update()
 {
+	mouseWheelInput();
+	gameStartKeyInput();
+	gameSelectKeyInput();
+	stageElipseUpdate();
+}
+
+void StageSelect::draw() const
+{
+	for (size_t i = 0; i < stageIDList_.size(); ++i)
+	{
+		const int yOffset = -50 * (static_cast<int>(i) - static_cast<int>(selectedStage_));
+		const StageData sd = StageRepository::instance().get(stageIDList_[i]);
+
+		FontAsset(GameAssets::Font::StageTitle)(sd.name)
+			.drawAt(Scene::Center() + Point(0, yOffset),
+				ColorF(1.0, 1.0, 1.0, (i == selectedStage_) ? 1.0 : 0.5));
+	}
+
+
+	stageElipse_.draw();
+}
+
+void StageSelect::mouseWheelInput()
+{
+	//マウスホイール
+	//一定の値まで回すとカウント
 	wheelCount_ += Mouse::Wheel() * 5;
 
 	if (wheelCount_ > wheelSpace_)
@@ -30,7 +56,11 @@ void StageSelect::update()
 		wheelCount_ = 0;
 		wheelFlag_ = 1;
 	}
+}
 
+void StageSelect::gameStartKeyInput()
+{
+	//ゲームスタート
 	if ((KeyEnter | KeyZ | KeySpace | MouseL).down())
 	{
 		if (!stageIDList_.isEmpty())
@@ -39,6 +69,10 @@ void StageSelect::update()
 			changeScene(SceneName::Game);
 		}
 	}
+}
+
+void StageSelect::gameSelectKeyInput()
+{
 	if (!stageIDList_.isEmpty())
 	{
 		if ((KeyW | KeyUp).down() || wheelFlag_ == 1)
@@ -52,62 +86,31 @@ void StageSelect::update()
 			selectedStage_ = (selectedStage_ + 1) % stageIDList_.size();
 		}
 	}
+}
 
-	timeAnim_ += Scene::DeltaTime();
-	if (timeAnim_ > (timeSpan_ + timeSpace_) * 2)
-		timeAnim_ -= (timeSpan_ + timeSpace_) * 2;
+void StageSelect::stageElipseUpdate()
+{
+	int32 startPoint = 0;
+	int32 endPoint = stageIDList_.size() - 1;
 
-	if (timeAnim_ < timeSpan_)
+	if (selectedStage_ == startPoint)
 	{
-		Scene::SetBackground((timeAnim_ < timeSpan_ - timeSpace_) ? kColorA : kColorB);
+		stageElipse_.readSelectedStage(2, 5, selectedStage_);
 	}
-	else if (timeAnim_ < timeSpan_ + timeSpace_)
+	else if (selectedStage_ == startPoint + 1)
 	{
-		Scene::SetBackground(kColorB);
+		stageElipse_.readSelectedStage(1, 5, selectedStage_);
 	}
-	else if (timeAnim_ < timeSpan_ * 2 + timeSpace_)
+	else if (selectedStage_ == (endPoint - 1))
 	{
-		Scene::SetBackground((timeAnim_ < timeSpan_ * 2) ? kColorB : kColorA);
+		stageElipse_.readSelectedStage(0, 4, selectedStage_);
+	}
+	else if (selectedStage_ == endPoint)
+	{
+		stageElipse_.readSelectedStage(0, 3, selectedStage_);
 	}
 	else
 	{
-		Scene::SetBackground(kColorA);
-	}
-}
-
-void StageSelect::draw() const
-{
-	const Point drawableSize = Scene::Center();
-	const Point num = Point(drawableSize.x / kMargin + 1, drawableSize.y / kMargin + 1);
-
-	if (timeAnim_ < timeSpan_)
-	{
-		for (int i = -num.x; i < num.x + 1; ++i)
-		{
-			for (int j = -num.y; j < num.y + 1; ++j)
-			{
-				Circle(drawableSize + Point(i, j) * kMargin, kMargin * timeAnim_ / timeSpan_).draw(kColorB);
-			}
-		}
-	}
-	else if (timeAnim_ < timeSpan_ * 2 + timeSpace_ && timeAnim_ >= timeSpan_ + timeSpace_)
-	{
-		for (int i = -num.x; i < num.x; ++i)
-		{
-			for (int j = -num.y; j < num.y; ++j)
-			{
-				Circle(drawableSize + (Vec2(i, j) + Vec2(0.5, 0.5)) * kMargin,
-					kMargin * (timeAnim_ - timeSpan_) / timeSpan_).draw(kColorA);
-			}
-		}
-	}
-
-	for (size_t i = 0; i < stageIDList_.size(); ++i)
-	{
-		const int yOffset = 50 * (static_cast<int>(i) - static_cast<int>(selectedStage_));
-		const StageData sd = StageRepository::instance().get(stageIDList_[i]);
-		FontAsset(GameAssets::Font::StageTitle)(sd.name)
-			.drawAt(Scene::Center() + Point(0, yOffset),
-				ColorF(1.0, 1.0, 1.0, (i == selectedStage_) ? 1.0 : 0.5));
+		stageElipse_.readSelectedStage(0, 5, selectedStage_);
 	}
 }

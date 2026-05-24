@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <Siv3D.hpp> // OpenSiv3D v0.6.16
 
 inline constexpr int SCENE_WIDTH = 720;
@@ -22,6 +22,7 @@ struct StageData
 	String path;
 	String name;
 	int nextStageID = 0;
+	String image;
 };
 
 struct GameData

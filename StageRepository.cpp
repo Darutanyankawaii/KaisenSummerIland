@@ -1,4 +1,4 @@
-#include "StageRepository.hpp"
+﻿#include "StageRepository.hpp"
 
 StageRepository::StageRepository()
 {
@@ -30,9 +30,9 @@ void StageRepository::load()
 		if (csv[i].size() != 4) continue;
 		const int id = Parse<int>(csv[i][0]);
 		stages_.emplace(id, StageData{
-			U"Maps/" + csv[i][1],
-			csv[i][2],
-			Parse<int>(csv[i][3])
+			U"Maps/" + csv[i][1]
+			,csv[i][2]
+			,Parse<int>(csv[i][3])
 			});
 	}
 
@@ -40,6 +40,7 @@ void StageRepository::load()
 	{
 		if (key != 0) sortedIDs_.push_back(key);
 	}
+
 	sortedIDs_.sort();
 }
 
