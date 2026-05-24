@@ -11,9 +11,7 @@ void AssetRegistry::registerAll()
 
 void AssetRegistry::registerAudio()
 {
-	AudioAsset::Register(String{ GameAssets::Audio::Walk }, U"sound/walk.ogg");
-	AudioAsset::Register(String{ GameAssets::Audio::Shot }, U"sound/shot.ogg");
-	AudioAsset::Register(String{ GameAssets::Audio::BGM }, U"sound/bgm.mp3");
+	// 音声は SoundSystem (Sound::init) で一元管理する
 }
 
 void AssetRegistry::registerFonts()
@@ -32,6 +30,7 @@ void AssetRegistry::registerTextures()
 	// ブロック・背景
 	TextureAsset::Register(String{ GameAssets::Texture::Map1 }, U"maptip.png");
 	TextureAsset::Register(String{ GameAssets::Texture::Background }, U"background.png");
+	TextureAsset::Register(String{ GameAssets::Texture::Sky }, U"sky.png");
 	TextureAsset::Register(String{ GameAssets::Texture::GameOver }, U"gameOver.png");
 
 	// 敵
@@ -39,6 +38,8 @@ void AssetRegistry::registerTextures()
 	TextureAsset::Register(String{ GameAssets::Texture::Octopus2 }, U"image/octopus/octopus_2.png");
 	TextureAsset::Register(String{ GameAssets::Texture::Maguro1 }, U"image/boss/boss_left.png");
 	TextureAsset::Register(String{ GameAssets::Texture::Maguro2 }, U"image/boss/boss_right.png");
+	TextureAsset::Register(String{ GameAssets::Texture::AppleMan }, U"AppleMan.png");
+	TextureAsset::Register(String{ GameAssets::Texture::Fish }, U"fish.png");
 
 	// 武器アイテム
 	TextureAsset::Register(String{ GameAssets::Texture::GunNormal }, U"image/item_gun/normal_gun.png");

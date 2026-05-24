@@ -2,6 +2,7 @@
 #include "Basic.hpp"
 #include "Camera.hpp"
 #include "PlayerAnimationSet.hpp"
+#include "IWeapon.hpp"
 
 class Bullet;
 class Enemy;
@@ -21,8 +22,13 @@ public:
 	void recoverDamage(int damage);
 	void receiveDamage(int damage);
 	void knockBackToEnemy(const Array<std::unique_ptr<Enemy>>& enemies);
+	// 弾被弾時の処理 (無敵時間中は無効)。bulletPos からノックバック方向を決定
+	void onBulletHit(const Vec2& bulletPos);
 
 	int getHp() const { return hp_; }
+	// 現武器のクールタイム残量比 (0..1、HUD 表示用)。武器未装備時は 0
+	double getWeaponCooltimeRatio() const { return weapon_ ? weapon_->cooltimeRatio() : 0.0; }
+	int getWeaponId() const { return weapon_ ? weapon_->weaponId() : -1; }
 	int getDir() const { return playerDir_; }
 
 	double getPosX() const { return pos_.x; }
@@ -45,6 +51,15 @@ public:
 	void setSpeedY(double y) { speed_ = Vec2{ speed_.x, y }; }
 	void setPos(const Vec2& pos) { pos_ = pos; }
 
+	// CSV のスポーンセル (スプライト top-left の意図) を受け取り、
+	// 内部の pos_ (=hitbox top-left) へ変換して設定する
+	void setSpawnAt(const Vec2& spriteTopLeft) {
+		pos_ = spriteTopLeft - SPRITE_DRAW_OFFSET;
+	}
+
+	// スプライト top-left を返す (カメラ初期位置などで利用)
+	Vec2 getSpritePos() const { return pos_ + SPRITE_DRAW_OFFSET; }
+
 	// 武器設定 (Item から呼ばれる)
 	void setWeapon(int weaponId);
 	int weaponId() const;
@@ -61,14 +76,27 @@ private:
 	void initAnimations();
 	void playSound();
 	void attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>& playerBullets_);
+	// 接触/被弾時の共通ダメージ適用 (無敵時間中は無効)
+	void applyHitFrom(const Vec2& sourcePos);
 
+public:
+	// テクスチャサイズ (描画用)
+	static constexpr Vec2 SPRITE_SIZE{ 64, 64 };
+	// pos_ (=hitbox top-left) から sprite top-left へのオフセット。
+	// スプライト 64x64 のうち、stand フレームの opaque 範囲は y=9..63 / x=10..50。
+	// 体本体 (ハット除外) の典型範囲は x=18..46 (w=28)、y=9..63 (h=55)。
+	// hitbox を体に合わせ、描画はスプライト全体を残す。
+	static constexpr Vec2 SPRITE_DRAW_OFFSET{ -18, -9 };
+
+private:
 	static constexpr Vec2 SET_SPEED{ 0, 0 };
 	static constexpr Vec2 SET_ACCEL{ 0, 0 };
-	static constexpr Vec2 SIZE{ 64, 64 };
+	// 当たり判定サイズ。スプライトの体部分にフィット (ハット・余白を除外)
+	static constexpr Vec2 SIZE{ 28, 55 };
 
 	static constexpr float kJumpImpulse = 18.0f;
 	static constexpr double kKnockBackSpeed = 5.0;
-	static constexpr double kShotPostDuration = 0.5;
+	static constexpr double kShotPostDuration = 0.3; // 狙うアニメ維持期間の下限 (秒)
 
 	Vec2 pos_{ 0, 0 };
 	Vec2 speed_{ SET_SPEED };
@@ -77,12 +105,12 @@ private:
 	int playerDir_ = 1;
 	Vec2 attackDir_{ 1, 0 };
 	bool isGround_ = false;
+	bool prevIsGround_ = false; // 前フレームの接地状態 (着地 SE 検出用)
 
 	int hp_ = 5;
 	int walkSpeed_ = 5;
 	float gravity_ = 1.0f;
 
-	bool aimFlag_ = false;
 	bool shotNow_ = false;
 	double shotTime_ = 0.0;
 

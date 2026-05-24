@@ -28,14 +28,12 @@ namespace GameAssets
 		inline constexpr StringView Thumbnail_3 = U"Thumbnail_3";
 		inline constexpr StringView Thumbnail_4 = U"Thumbnail_4";
 		inline constexpr StringView Thumbnail_5 = U"Thumbnail_5";
+		inline constexpr StringView AppleMan = U"APPLE_MAN";
+		inline constexpr StringView Fish = U"FISH";
+		inline constexpr StringView Sky = U"SKY";
 	}
 
-	namespace Audio
-	{
-		inline constexpr StringView Walk = U"walk";
-		inline constexpr StringView Shot = U"shot";
-		inline constexpr StringView BGM = U"bgm";
-	}
+	// 音声は SoundSystem (Sound::SE) で管理する
 
 	namespace Font
 	{

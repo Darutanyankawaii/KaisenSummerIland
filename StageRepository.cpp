@@ -27,12 +27,19 @@ void StageRepository::load()
 
 	for (size_t i = 0; i < csv.rows(); ++i)
 	{
-		if (csv[i].size() != 4) continue;
+		if (csv[i].size() < 4) continue;
 		const int id = Parse<int>(csv[i][0]);
+		BgKind bg = BgKind::Sea;
+		if (csv[i].size() >= 5)
+		{
+			const String& tag = csv[i][4];
+			if (tag == U"sky") bg = BgKind::Sky;
+		}
 		stages_.emplace(id, StageData{
-			U"Maps/" + csv[i][1]
-			,csv[i][2]
-			,Parse<int>(csv[i][3])
+			U"Maps/" + csv[i][1],
+			csv[i][2],
+			Parse<int>(csv[i][3]),
+			bg
 			});
 	}
 

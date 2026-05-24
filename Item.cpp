@@ -1,6 +1,7 @@
 #include "Game.hpp"
 #include "Item.hpp"
 #include "AssetIDs.hpp"
+#include "SoundSystem.hpp"
 
 void Game::PutItem(const LoadedStage& stage)
 {
@@ -39,6 +40,7 @@ void Game::checkItem()
 		if (player_->getRectF().intersects((*it)->get_rect()))
 		{
 			(*it)->get_item(player_);
+			Sound::play(Sound::SE::ItemPickup);
 			it = items_.erase(it);
 		}
 		else
@@ -78,7 +80,11 @@ Shaved_Ice::Shaved_Ice(const Vec2& region) : Item(region) {}
 
 void Shaved_Ice::get_item(std::unique_ptr<Player>& player) const
 {
-	if (player->getHp() < 5) player->recoverDamage(1);
+	if (player->getHp() < 5)
+	{
+		player->recoverDamage(1);
+		Sound::play(Sound::SE::HpRecover);
+	}
 }
 
 void Shaved_Ice::draw() const

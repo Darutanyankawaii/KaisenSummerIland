@@ -4,6 +4,7 @@
 #include "Block.hpp"
 #include "Enemy.hpp"
 #include "Camera.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	constexpr double kCollisionEpsilon = FLT_EPSILON;
@@ -88,10 +89,10 @@ void Collision::CollisionWithWall(const Array<Block>& blocks, Array<std::unique_
 		if (block.getFlag() != 1) continue;
 		for (auto& enemy : enemies)
 		{
-			if (!enemy->hasHitbox()) continue;
+			if (!enemy->hasTerrainCollision()) continue;
 			resolveWallTouch(block.getRegion(), *enemy,
-				[&] { enemy->setFacingRight(false); },
-				[&] { enemy->setFacingRight(true); });
+				[&] { enemy->onRightWallHit(); },
+				[&] { enemy->onLeftWallHit(); });
 		}
 	}
 }
@@ -110,9 +111,9 @@ void Collision::CollisionWithGround(const Array<Block>& blocks, std::unique_ptr<
 			resolveGroundTouchSolid(block.getRegion(), *player, true, grounded);
 			if (grounded) player->setGround(true);
 		}
-		else
+		else if (block.getFlag() == 2)
 		{
-			// 上からのみ着地できる薄いブロック等
+			// 上からのみ着地できる薄いブロック (ハーフブロック)
 			if (block.getRegion().intersects(player->getRectF().bottom()) && player->getSpeedY() >= 0)
 			{
 				const double blockTop = block.getRegion().topCenter().y;
@@ -130,7 +131,7 @@ void Collision::CollisionWithGround(const Array<Block>& blocks, Array<std::uniqu
 	{
 		for (auto& enemy : enemies)
 		{
-			if (!enemy->hasHitbox()) continue;
+			if (!enemy->hasTerrainCollision()) continue;
 
 			if (block.getFlag() == 1)
 			{
@@ -142,7 +143,7 @@ void Collision::CollisionWithGround(const Array<Block>& blocks, Array<std::uniqu
 					enemy->setAccelY(0);
 				}
 			}
-			else
+			else if (block.getFlag() == 2)
 			{
 				if (block.getRegion().intersects(enemy->getRectF().bottom()) && enemy->getSpeedY() >= 0)
 				{
@@ -169,10 +170,11 @@ void Collision::CheckBulletsAlive(Array<std::unique_ptr<Bullet>>& bullets,
 		return !area.contains(b->getCircle());
 		});
 
-	// ブロックと衝突した弾を削除
+	// ブロックと衝突した弾を削除 (薄いブロック (足場) や装飾ブロックは貫通させる)
 	bullets.remove_if([&](const std::unique_ptr<Bullet>& b) {
 		for (const auto& block : blocks)
 		{
+			if (block.getFlag() != 1) continue;
 			if (block.getRegion().intersects(b->getCircle())) return true;
 		}
 		return false;
@@ -182,7 +184,9 @@ void Collision::CheckBulletsAlive(Array<std::unique_ptr<Bullet>>& bullets,
 // ===== 弾と敵 =====
 
 bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
-	Array<std::unique_ptr<Enemy>>& enemies)
+	Array<std::unique_ptr<Enemy>>& enemies,
+	const OnEnemyDefeat& onDefeat,
+	const OnEnemyHit& onHit)
 {
 	bool bossKilled = false;
 
@@ -194,12 +198,27 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 		{
 			if ((*enemy)->getRectF().intersects((*bt)->getCircle()))
 			{
+				const Vec2 hitPos = (*bt)->getPos();
 				bt = bullets.erase(bt);
 				(*enemy)->takeDamage(1);
+				if (onHit) onHit(hitPos);
 
 				if ((*enemy)->getHp() < 1)
 				{
-					if ((*enemy)->isBoss()) bossKilled = true;
+					const bool isBoss = (*enemy)->isBoss();
+					if (isBoss)
+					{
+						bossKilled = true;
+						Sound::play(Sound::SE::BossDefeat);
+					}
+					else
+					{
+						Sound::play(Sound::SE::EnemyDefeat);
+					}
+					if (onDefeat)
+					{
+						onDefeat((*enemy)->getRectF().center(), isBoss);
+					}
 					enemyDead = true;
 				}
 				break;
@@ -233,8 +252,9 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 	{
 		if (player->getRectF().intersects((*bt)->getCircle()))
 		{
+			const Vec2 bulletPos = (*bt)->getPos();
 			bt = bullets.erase(bt);
-			player->receiveDamage(1);
+			player->onBulletHit(bulletPos);
 			return true;
 		}
 		++bt;
@@ -242,13 +262,3 @@ bool Collision::CollisionWithBullet(Array<std::unique_ptr<Bullet>>& bullets,
 	return false;
 }
 
-void Collision::CollisionWithBullet(std::unique_ptr<Bullet>& bullet,
-	std::unique_ptr<Player>& player)
-{
-	if (!bullet || bullet->isHit()) return;
-	if (player->getRectF().intersects(bullet->getCircle()))
-	{
-		player->receiveDamage(1);
-		bullet->markHit();
-	}
-}

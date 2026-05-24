@@ -1,6 +1,7 @@
 #include "TakoAI.hpp"
 #include "Enemy.hpp"
 #include "Bullet.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	constexpr double kGasInterval = 5.0;
@@ -13,7 +14,7 @@ namespace {
 	constexpr BulletParams kGasParams{
 		.bulletSpeed = 1.0,
 		.fallSpeed = 1.0,
-		.size = 30,
+		.size = 16,
 		.lifeSpan = 3.0,
 	};
 	constexpr double kGasHorizontalSpeed = 100.0;
@@ -21,25 +22,22 @@ namespace {
 
 void TakoAI::tick(Tako& self, double dt)
 {
-	// ガス弾の生成 (一定間隔で必ず生成)
+	// ガス弾の生成 (一定間隔で必ず生成、プレイヤー方向に発射)
 	gasTimer_ += dt;
 	if (gasTimer_ > kGasInterval)
 	{
 		self.bullets().push_back(
 			Bullet::createAimed(self.getPos(),
-				Vec2(self.getPosX() - 100, self.getPosY()), kGasParams));
+				self.getPlayerPos(), kGasParams));
+		Sound::play(Sound::SE::EnemyShot);
 		gasTimer_ = 0.0;
 	}
 
-	// ガス弾の進行 / 寿命
+	// ガス弾の進行 (各弾の dir に従って進行)
 	for (auto& bullet : self.bullets())
 	{
-		bullet->addPos(Vec2{ -dt * kGasHorizontalSpeed, 0 });
-		bullet->decreaseLifeSpan(dt);
+		bullet->addPos(bullet->getDir() * (dt * kGasHorizontalSpeed));
 	}
-	self.bullets().remove_if([](const std::unique_ptr<Bullet>& b) {
-		return b->getLifeSpan() < 0 || b->isHit();
-		});
 
 	// 突進パターン (moveX 中で実行)
 	phaseTimer_ += dt;
@@ -53,14 +51,12 @@ void TakoAI::tick(Tako& self, double dt)
 			self.setSpeed(kDashSpeed);
 			phase_ = TakoPhase::Dashing;
 			phaseDuration_ = kDashDuration;
-			self.setVisualPhaseRest(false);
 		}
 		else
 		{
 			// 待機へ
 			phase_ = TakoPhase::Resting;
 			phaseDuration_ = kRestDuration;
-			self.setVisualPhaseRest(true);
 		}
 	}
 

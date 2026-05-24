@@ -1,15 +1,34 @@
 #include "MaguroAI.hpp"
 #include "Enemy.hpp"
 #include "Bullet.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
 	constexpr double kIdleInterval = 0.5;        // 攻撃選択までの間隔
 	constexpr double kChargeDuration = 1.0;      // 突進前モーション時間
 	constexpr double kSpreadDuration = 1.0;      // 拡散弾後の硬直時間 (SPAWN_DIFFUSION)
-	constexpr double kRushSpeed = 12.0;
+	constexpr double kRushTimeout = 2.5;         // 突進の最大持続時間 (壁スタックの保険)
+	constexpr double kRushSpeed = 720.0; // units/sec (60fps 換算で 12/frame 相当)
 	constexpr double kGoalCheckRadius = 10.0;
 	constexpr double kSelfCheckRadius = 5.0;
 	constexpr BulletParams kSpreadBulletParams{};
+
+	// HomingShot 関連
+	constexpr double kHomingTrackDuration = 2.0; // 追尾補正がかかる時間
+	constexpr double kHomingPhaseDuration = 2.5; // フェーズ全体の長さ
+	constexpr double kHomingTurnRate = 0.04;     // 1 フレームあたりの方向補正係数
+	constexpr BulletParams kHomingBulletParams{
+		.bulletSpeed = 8.0, .fallSpeed = 1.0, .size = 12, .lifeSpan = 4.0,
+	};
+
+	// BurstShot 関連
+	constexpr double kBurstInterval = 0.08; // 連射間隔
+	constexpr int    kBurstCount = 6;       // 1 セットあたりの弾数
+	constexpr double kBurstStiffness = 0.5; // 連射後の硬直
+	constexpr double kBurstSpreadDeg = 15.0; // 散らばり角度 (±)
+	constexpr BulletParams kBurstBulletParams{
+		.bulletSpeed = 12.0, .fallSpeed = 1.0, .size = 8, .lifeSpan = 2.5,
+	};
 }
 
 void MaguroAI::tick(Maguro& self, double dt)
@@ -19,13 +38,16 @@ void MaguroAI::tick(Maguro& self, double dt)
 	case MaguroPhase::Idle:
 	{
 		idleTimer_ += dt;
-		if (idleTimer_ > kIdleInterval)
+		const double idleInterval = isEnraged(self) ? 0.2 : kIdleInterval;
+		if (idleTimer_ > idleInterval)
 		{
 			idleTimer_ = 0.0;
-			switch (Random(2))
+			switch (Random(3))
 			{
 			case 0: enterChargingRush(self); break;
 			case 1: enterSpreading(self); break;
+			case 2: enterHomingShot(self); break;
+			case 3: enterBurstShot(self); break;
 			default: break;
 			}
 		}
@@ -48,15 +70,30 @@ void MaguroAI::tick(Maguro& self, double dt)
 	}
 	case MaguroPhase::Rushing:
 	{
+		rushTimer_ += dt;
+
+		// 突進中はプレイヤーをゆるく追尾 (速度方向を毎フレーム lerp で補正)
+		const Vec2 toPlayer = self.getPlayerPos() - self.getPos();
+		const double len = toPlayer.length();
+		if (len > 1e-6)
+		{
+			const Vec2 desired = (toPlayer / len) * kRushSpeed;
+			// 発狂時は追尾を強化
+			const double blend = isEnraged(self) ? 0.12 : 0.06;
+			self.setSpeed(self.getSpeed().lerp(desired, blend));
+		}
+
 		// 突進中: goPos に近づいたら Idle に戻す
 		const Vec2 center = self.getPos() + self.getSize() / 2;
 		const Vec2 targetCenter = rushTarget_ + self.getSize() / 2;
-		if (Circle{ targetCenter, kGoalCheckRadius }.intersects(
-			Circle{ center, kSelfCheckRadius }))
+		const bool reachedTarget = Circle{ targetCenter, kGoalCheckRadius }
+			.intersects(Circle{ center, kSelfCheckRadius });
+		const bool timedOut = rushTimer_ > kRushTimeout;
+
+		if (reachedTarget || timedOut)
 		{
-			// 着地補正
-			self.setPosY(self.getPosY() - 5.0);
-			self.setHitbox(true);
+			if (reachedTarget) self.setPosY(self.getPosY() - 5.0); // 着地補正
+			self.setTerrainCollision(true);
 			self.setGravity(0.1f);
 			self.setSpeed({ 0, 0 });
 			auto& anims = self.animations();
@@ -79,12 +116,77 @@ void MaguroAI::tick(Maguro& self, double dt)
 		}
 		break;
 	}
+	case MaguroPhase::HomingShot:
+	{
+		homingTimer_ += dt;
+
+		// 一発だけ撃つ (フェーズ先頭)
+		if (!homingFired_)
+		{
+			const Vec2 startPos = self.getPos() + self.getSize() / 2;
+			const Vec2 dir = unitDirection(startPos, self.getPlayerPos());
+			self.bullets().push_back(std::make_unique<Bullet>(startPos, dir, kHomingBulletParams));
+			Sound::play(Sound::SE::EnemyShot);
+			homingFired_ = true;
+		}
+
+		// 追尾期間中、bullets_ 全ての方向をプレイヤー方向にゆるく補正
+		if (homingTimer_ < kHomingTrackDuration)
+		{
+			for (auto& b : self.bullets())
+			{
+				const Vec2 cur = b->getDir();
+				const Vec2 desired = unitDirection(b->getPos(), self.getPlayerPos());
+				const Vec2 nd = (cur + (desired - cur) * kHomingTurnRate).normalized();
+				b->addDir(nd - cur);
+			}
+		}
+
+		if (homingTimer_ > kHomingPhaseDuration)
+		{
+			homingTimer_ = 0.0;
+			homingFired_ = false;
+			enterIdle(self);
+		}
+		break;
+	}
+	case MaguroPhase::BurstShot:
+	{
+		burstTimer_ += dt;
+
+		// kBurstInterval ごとに 1 発、kBurstCount に達するまで
+		const int burstCount = isEnraged(self) ? 10 : kBurstCount;
+		if (burstShotsFired_ < burstCount
+			&& burstTimer_ >= kBurstInterval * burstShotsFired_)
+		{
+			const Vec2 startPos = self.getPos() + self.getSize() / 2;
+			const Vec2 baseDir = unitDirection(startPos, self.getPlayerPos());
+			const double off = Random(-kBurstSpreadDeg, kBurstSpreadDeg) * 1_deg;
+			const double cs = std::cos(off), sn = std::sin(off);
+			const Vec2 dir{ baseDir.x * cs - baseDir.y * sn, baseDir.x * sn + baseDir.y * cs };
+			self.bullets().push_back(std::make_unique<Bullet>(startPos, dir, kBurstBulletParams));
+			Sound::play(Sound::SE::EnemyShot);
+			++burstShotsFired_;
+		}
+
+		if (burstShotsFired_ >= burstCount
+			&& burstTimer_ > kBurstInterval * burstCount + kBurstStiffness)
+		{
+			burstTimer_ = 0.0;
+			burstShotsFired_ = 0;
+			enterIdle(self);
+		}
+		break;
+	}
 	}
 
 	// 向きを毎フレーム更新
 	self.setFacingRight(self.getPlayerPos().x < self.getPosX());
-	// 突進中以外は X 移動なし (speed.x は突進中のみセット済み)
-	self.setPosX(self.getPosX() + self.getSpeedX());
+	// 突進中のみ X が動く。speed_.x は units/sec なので dt を掛ける。
+	if (phase_ == MaguroPhase::Rushing)
+	{
+		self.setPosX(self.getPosX() + self.getSpeedX() * dt);
+	}
 }
 
 void MaguroAI::enterIdle(Maguro& /*self*/)
@@ -107,9 +209,10 @@ void MaguroAI::enterRushing(Maguro& self)
 {
 	phase_ = MaguroPhase::Rushing;
 	chargeTimer_ = 0.0;
+	rushTimer_ = 0.0;
 	const Vec2 dir = unitDirection(self.getPos(), rushTarget_);
 	self.setSpeed(dir * kRushSpeed);
-	self.setHitbox(false);
+	self.setTerrainCollision(false);
 	self.setAnimeFlag(false);
 }
 
@@ -118,6 +221,20 @@ void MaguroAI::enterSpreading(Maguro& self)
 	phase_ = MaguroPhase::Spreading;
 	spreadTimer_ = 0.0;
 	emitSpread(self);
+}
+
+void MaguroAI::enterHomingShot(Maguro& /*self*/)
+{
+	phase_ = MaguroPhase::HomingShot;
+	homingTimer_ = 0.0;
+	homingFired_ = false;
+}
+
+void MaguroAI::enterBurstShot(Maguro& /*self*/)
+{
+	phase_ = MaguroPhase::BurstShot;
+	burstTimer_ = 0.0;
+	burstShotsFired_ = 0;
 }
 
 void MaguroAI::selectRushTarget(Maguro& self)
@@ -159,6 +276,20 @@ void MaguroAI::emitSpread(Maguro& self)
 	spawn(15, true);
 	spawn(-15, true);
 	spawn(0, true);
+	// 発狂時は角度を増やしてさらに4発追加
+	if (isEnraged(self))
+	{
+		spawn(30, false);
+		spawn(-30, false);
+		spawn(30, true);
+		spawn(-30, true);
+	}
+	Sound::play(Sound::SE::EnemyShot);
+}
+
+bool MaguroAI::isEnraged(const Maguro& self) const
+{
+	return self.getHp() < Maguro::BOSS_HP / 2;
 }
 
 Vec2 MaguroAI::unitDirection(const Vec2& from, const Vec2& to)

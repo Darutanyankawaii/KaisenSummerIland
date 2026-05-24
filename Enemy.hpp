@@ -52,11 +52,20 @@ public:
 	int getID() const { return ID_; }
 	bool isBoss() const { return ID_ == -1; }
 
-	bool hasHitbox() const { return hitbox_; }
-	void setHitbox(bool h) { hitbox_ = h; }
+	// 地形 (壁/床) との当たり判定を持つか。
+	// false の時は Collision::CollisionWithWall/Ground で無視される
+	// (突進中ボスのように一時的に地形貫通したいケースで使う)。
+	// プレイヤーとの接触判定 (knockBackToEnemy) はこのフラグの影響を受けない。
+	bool hasTerrainCollision() const { return terrainCollision_; }
+	void setTerrainCollision(bool v) { terrainCollision_ = v; }
 
 	bool isFacingRight() const { return dir_; }
 	void setFacingRight(bool right) { dir_ = right; }
+
+	// 壁衝突通知。デフォルトは向き反転のみ。
+	// 派生クラスで cooldown 等の追加処理を入れる場合に override する。
+	virtual void onRightWallHit() { setFacingRight(false); }
+	virtual void onLeftWallHit()  { setFacingRight(true); }
 
 	float getGravity() const { return gravity_; }
 	void setGravity(float g) { gravity_ = g; }
@@ -91,12 +100,17 @@ protected:
 	Vec2 speed_{ 0, 0 };
 	Vec2 accel_{ 0, gravity_ };
 	Vec2 SIZE_{ 48, 48 };
+	// スプライト top-left の pos_ からのオフセット。
+	// pos_ = hitbox top-left, スプライト描画位置 = pos_ + spriteDrawOffset_
+	Vec2 spriteDrawOffset_{ 0, 0 };
+	// スプライトを描画する位置 (各派生クラスの draw で利用)
+	Vec2 getSpriteDrawPos() const { return pos_ + spriteDrawOffset_; }
 	bool dir_ = false;
 	int walkSpeed_ = 3;
 	int hp_ = 1;
 	Array<std::unique_ptr<Bullet>> bullets_;
 	int ID_ = 0;
-	bool hitbox_ = true;
+	bool terrainCollision_ = true;
 	bool loop_ = true;
 
 	int playerDir_ = 0;
@@ -124,8 +138,12 @@ public:
 	void moveX() override;
 	void draw() const override;
 
+	void onRightWallHit() override;
+	void onLeftWallHit() override;
+
 private:
 	Animation animation_;
+	double wallEscapeTimer_ = 0.0;
 };
 
 class Tako : public Enemy
@@ -138,13 +156,36 @@ public:
 	void update() override;
 	void draw() const override;
 
-	// AI から状態を制御するための内部アクセス
-	void setVisualPhaseRest(bool rest) { restingPhase_ = rest; }
-	bool isRestingPhase() const { return restingPhase_; }
-
 private:
 	std::unique_ptr<TakoAI> ai_;
-	bool restingPhase_ = true; // 旧 flag_ (true=待機, false=突進)
+	Vec2 spawnPos_{ 0, 0 }; // 画面外に逃げないよう上昇上限を spawn から計算するため記憶
+};
+
+class AppleMan : public Enemy
+{
+public:
+	explicit AppleMan(const Vec2& pos);
+	void update() override;
+	void moveX() override;
+	void draw() const override;
+
+private:
+	double jumpTimer_ = 0.0;
+};
+
+class Fish : public Enemy
+{
+public:
+	explicit Fish(const Vec2& pos);
+	void moveX() override;
+	void moveY() override;
+	void update() override;
+	void draw() const override;
+
+private:
+	double swimTime_ = 0.0;
+	double baseY_ = 0.0;
+	double bubbleTimer_ = 0.0;
 };
 
 class Maguro : public Enemy
@@ -166,7 +207,7 @@ public:
 	int getAnimeDir() const { return animeDir_; }
 
 	static constexpr int IMAGE_NUM = 2;
-	static constexpr int BOSS_HP = 30;
+	static constexpr int BOSS_HP = 20;
 	static constexpr int BOSS_ID = -1;
 
 private:

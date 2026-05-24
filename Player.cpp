@@ -3,10 +3,12 @@
 #include "Enemy.hpp"
 #include "IWeapon.hpp"
 #include "WeaponFactory.hpp"
-#include "AssetIDs.hpp"
+#include "SoundSystem.hpp"
 
 namespace {
-	constexpr Vec2 kBulletOffset{ 32, 32 };
+	// 発射位置: スプライト中心 (pos_ + (14, 23)) を基準に、向きに応じて手側にずらす
+	constexpr Vec2 kBulletOffsetCenter{ 14, 23 };
+	constexpr double kHandOffsetX = 8.0;
 }
 
 Player::Player()
@@ -18,7 +20,7 @@ Player::Player()
 
 Player::~Player()
 {
-	AudioAsset(GameAssets::Audio::Walk).stop();
+	Sound::stop(Sound::SE::Walk);
 }
 
 void Player::setWeapon(int weaponId)
@@ -36,7 +38,9 @@ void Player::updateX()
 	if (shotNow_)
 	{
 		shotTime_ += Scene::DeltaTime();
-		if (shotTime_ > kShotPostDuration)
+		// 狙うアニメ維持期間は武器のクールタイムに合わせる (最低 kShotPostDuration 0.3s)
+		const double aimHold = weapon_ ? Max(weapon_->cooltimeSec(), kShotPostDuration) : kShotPostDuration;
+		if (shotTime_ > aimHold)
 		{
 			shotTime_ = 0;
 			shotNow_ = false;
@@ -58,13 +62,13 @@ void Player::updateX()
 		if (isGround_)
 			state_ = State::Stand;
 
-		if ((KeyD | KeyRight).pressed() && !aimFlag_)
+		if ((KeyD | KeyRight).pressed())
 		{
 			playerDir_ = 1;
 			speed_.x = playerDir_ * walkSpeed_;
 			state_ = State::Walk;
 		}
-		else if ((KeyA | KeyLeft).pressed() && !aimFlag_)
+		else if ((KeyA | KeyLeft).pressed())
 		{
 			playerDir_ = -1;
 			speed_.x = playerDir_ * walkSpeed_;
@@ -78,7 +82,7 @@ void Player::updateX()
 
 	if (isKnockback_)
 	{
-		pos_.x += knockBackDir_ * kKnockBackSpeed;
+		pos_.x += knockBackDir_ * kKnockBackSpeed * FpsFactor();
 		if (collisionalTimer_.reachedZero())
 		{
 			isKnockback_ = false;
@@ -86,7 +90,7 @@ void Player::updateX()
 	}
 	else
 	{
-		pos_.x += speed_.x;
+		pos_.x += speed_.x * FpsFactor();
 	}
 
 	if (invincibleTimer_.reachedZero())
@@ -103,10 +107,11 @@ void Player::updateY()
 	{
 		accel_.y -= kJumpImpulse;
 		state_ = State::Jump;
+		Sound::play(Sound::SE::Jump);
 	}
 
-	speed_.y += accel_.y;
-	pos_.y += speed_.y;
+	speed_.y += accel_.y * FpsFactor();
+	pos_.y += speed_.y * FpsFactor();
 
 	if (!isGround_ && state_ != State::Aiming)
 	{
@@ -122,6 +127,14 @@ void Player::lastUpdate(const CustomCamera2D& camera, Array<std::unique_ptr<Bull
 	animations_.tick(state_, weaponId(), attackDir_);
 
 	playSound();
+
+	// 着地検出
+	if (!prevIsGround_ && isGround_)
+	{
+		Sound::play(Sound::SE::Land);
+	}
+	prevIsGround_ = isGround_;
+
 	prevState_ = state_;
 }
 
@@ -130,14 +143,28 @@ void Player::draw() const
 	const Texture tex = animations_.currentTexture();
 	if (!tex) return;
 
+	// pos_ は hitbox top-left なので、スプライトは SPRITE_DRAW_OFFSET だけ寄せて描画
+	const Vec2 drawAt = pos_ + SPRITE_DRAW_OFFSET;
+
+	// 無敵時間中は alpha を点滅させて被弾フィードバックを出す
+	ColorF tint{ 1.0 };
+	if (isInvincible_)
+	{
+		constexpr double kInvincibleDuration = 0.7;
+		const double elapsedSec = kInvincibleDuration - invincibleTimer_.sF();
+		constexpr double kFlashHz = 14.0;
+		const bool dim = static_cast<int>(elapsedSec * kFlashHz) % 2 == 0;
+		tint = ColorF{ 1.0, 1.0, 1.0, dim ? 0.35 : 1.0 };
+	}
+
 	if (state_ == State::Aiming)
 	{
-		tex.draw(pos_);
+		tex.draw(drawAt, tint);
 	}
 	else
 	{
-		if (playerDir_ == 1) tex.draw(pos_);
-		else if (playerDir_ == -1) tex.mirrored().draw(pos_);
+		if (playerDir_ == 1) tex.draw(drawAt, tint);
+		else if (playerDir_ == -1) tex.mirrored().draw(drawAt, tint);
 	}
 }
 
@@ -146,20 +173,32 @@ void Player::receiveDamage(int damage)
 	hp_ -= damage;
 }
 
+void Player::applyHitFrom(const Vec2& sourcePos)
+{
+	if (isInvincible_) return;
+	hp_ -= 1;
+	collisionalTimer_.restart();
+	invincibleTimer_.restart();
+	isKnockback_ = true;
+	isInvincible_ = true;
+	knockBackDir_ = (pos_.x < sourcePos.x) ? -1 : 1;
+	Sound::play(Sound::SE::PlayerHit);
+}
+
 void Player::knockBackToEnemy(const Array<std::unique_ptr<Enemy>>& enemies)
 {
 	for (const auto& enemy : enemies)
 	{
-		if (!isInvincible_ && this->getRectF().intersects(enemy->getRectF()))
+		if (this->getRectF().intersects(enemy->getRectF()))
 		{
-			collisionalTimer_.restart();
-			invincibleTimer_.restart();
-			receiveDamage(1);
-			isKnockback_ = true;
-			isInvincible_ = true;
-			knockBackDir_ = (pos_.x < enemy->getPosX()) ? -1 : 1;
+			applyHitFrom(enemy->getPos());
 		}
 	}
+}
+
+void Player::onBulletHit(const Vec2& bulletPos)
+{
+	applyHitFrom(bulletPos);
 }
 
 void Player::recoverDamage(int damage)
@@ -178,13 +217,13 @@ void Player::playSound()
 
 	if (prevState_ == State::Walk)
 	{
-		AudioAsset(GameAssets::Audio::Walk).stop();
+		Sound::stop(Sound::SE::Walk);
 	}
 
 	if (state_ == State::Walk && isGround_)
 	{
-		AudioAsset(GameAssets::Audio::Walk).setLoop(true);
-		AudioAsset(GameAssets::Audio::Walk).play();
+		Sound::setLoop(Sound::SE::Walk, true);
+		Sound::start(Sound::SE::Walk);
 	}
 }
 
@@ -195,42 +234,42 @@ void Player::attack(const CustomCamera2D& camera, Array<std::unique_ptr<Bullet>>
 	// クールタイムは常に進行
 	weapon_->tick(Scene::DeltaTime());
 
-	aimFlag_ = false;
-
 	const bool isFirstClick = MouseL.down();
 	const bool isHolding = MouseL.pressed();
-	const bool inAimingState = (state_ == State::Aiming);
 
 	const auto t = camera.createTransformer();
-	const Vec2 startPos = pos_ + kBulletOffset;
+	const Vec2 startPos = pos_ + kBulletOffsetCenter
+		+ Vec2((playerDir_ == -1 ? -kHandOffsetX : kHandOffsetX), 0);
 	const Vec2 cursorWorld = Cursor::Pos();
 
 	bool fired = false;
 
 	if (isFirstClick)
 	{
-		// 任意の武器: クリックの瞬間に aiming へ
-		speed_.x = 0;
-		aimFlag_ = true;
+		// 任意の武器: クリックの瞬間に aiming へ (移動は止めない)
 		attackDir_ = (Cursor::Pos() - getCenter()).normalize();
 		state_ = State::Aiming;
 		shotNow_ = true;
-
-		// 単発武器のみ: 同フレームで発射
-		if (!weapon_->isContinuous())
+		// 単発・連射いずれも同フレームで発射 (連射は次フレーム以降も継続)
+		fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
+		if (!fired)
 		{
-			fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
+			// クールタイム中: 空打ちフィードバック
+			Sound::play(Sound::SE::Empty);
 		}
 	}
-	else if (isHolding && inAimingState && weapon_->isContinuous())
+	else if (isHolding && weapon_->isContinuous())
 	{
-		// 連射武器: aiming 中の継続クリック
+		// 連射武器: hold 中は state に関係なく発射継続 (狙いも追従更新)
+		attackDir_ = (Cursor::Pos() - getCenter()).normalize();
+		state_ = State::Aiming;
 		shotNow_ = true;
+		shotTime_ = 0.0; // hold 中は aiming タイマーをリセットし続け、状態維持
 		fired = weapon_->tryFire(startPos, cursorWorld, playerBullets_);
 	}
 
 	if (fired)
 	{
-		AudioAsset(GameAssets::Audio::Shot).playOneShot();
+		Sound::play(Sound::SE::PlayerShot);
 	}
 }
