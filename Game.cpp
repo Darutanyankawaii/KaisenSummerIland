@@ -67,8 +67,19 @@ Game::Game(const InitData& init) : IScene{ init }
 		// CSV のスポーンセル位置はスプライト top-left を意図しているため、
 		// setSpawnAt で内部の hitbox top-left に変換する。
 		player_->setSpawnAt(loadedStage_.playerStart);
-		camera_.startPos = player_->getSpritePos().movedBy(0, -1 * kBlockSize);
-		camera_ = CustomCamera2D(camera_.startPos);
+
+		// カメラ初期位置をマップ範囲内にクランプしてからスナップ。
+		// クランプしないと、スポーンがマップ左端に近いとき視野が world x<0 へ
+		// はみ出して背景タイル外の領域 (=未描画) が見えてしまう。
+		constexpr double halfSceneWidth = SCENE_WIDTH / 2.0;
+		const Vec2 desired = player_->getSpritePos().movedBy(0, -1 * kBlockSize);
+		const double clampedX = Clamp(desired.x, halfSceneWidth,
+			static_cast<double>(mapSize_.x) - halfSceneWidth);
+		const Vec2 initialCenter{ clampedX, desired.y };
+		camera_ = CustomCamera2D(initialCenter);
+		camera_.startPos = initialCenter;
+		camera_.jumpTo(initialCenter, 1.0);
+		camera_.setTargetCenter(initialCenter);
 	}
 
 	PutBlocks(loadedStage_);
@@ -222,13 +233,9 @@ void Game::draw() const
 			}
 		}
 
+		for (const auto& bd : loadedStage_.blocks)
 		{
-			// タイル境界で隣接ピクセルが滲んで継ぎ目に見えないよう Nearest サンプリング固定
-			const ScopedRenderStates2D sampler{ SamplerState::ClampNearest };
-			for (const auto& bd : loadedStage_.blocks)
-			{
-				maps_[bd.num].draw(bd.pos);
-			}
+			maps_[bd.num].draw(bd.pos);
 		}
 
 #ifdef DEBUGGING
