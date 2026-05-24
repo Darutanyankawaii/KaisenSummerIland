@@ -91,6 +91,11 @@ protected:
 	Vec2 speed_{ 0, 0 };
 	Vec2 accel_{ 0, gravity_ };
 	Vec2 SIZE_{ 48, 48 };
+	// スプライト top-left の pos_ からのオフセット。
+	// pos_ = hitbox top-left, スプライト描画位置 = pos_ + spriteDrawOffset_
+	Vec2 spriteDrawOffset_{ 0, 0 };
+	// スプライトを描画する位置 (各派生クラスの draw で利用)
+	Vec2 getSpriteDrawPos() const { return pos_ + spriteDrawOffset_; }
 	bool dir_ = false;
 	int walkSpeed_ = 3;
 	int hp_ = 1;
